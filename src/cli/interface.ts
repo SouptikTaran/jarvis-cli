@@ -1,7 +1,9 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import boxen from 'boxen';
+import ora from 'ora';
 import { Logger } from '../utils/logger';
+import { GeminiClient } from '../agent/gemini';
 
 export interface CLIOptions {
   verbose?: boolean;
@@ -10,6 +12,7 @@ export interface CLIOptions {
 
 export class JarvisCLI {
   private logger: Logger;
+  private geminiClient: GeminiClient | null = null;
   private isRunning: boolean = false;
 
   constructor(private options: CLIOptions = {}) {
@@ -19,6 +22,10 @@ export class JarvisCLI {
   async start(): Promise<void> {
     try {
       this.displayWelcome();
+      
+      // Initialize Gemini client
+      await this.initializeGemini();
+      
       this.isRunning = true;
 
       // Main interaction loop
@@ -30,35 +37,64 @@ export class JarvisCLI {
     }
   }
 
+  private async initializeGemini(): Promise<void> {
+    const spinner = ora('Connecting to JARVIS AI brain...').start();
+    
+    try {
+      this.geminiClient = new GeminiClient(this.logger);
+      
+      // Test the connection
+      const isConnected = await this.geminiClient.testConnection();
+      
+      if (isConnected) {
+        spinner.succeed(chalk.green('🧠 JARVIS AI brain online and ready!'));
+      } else {
+        spinner.warn(chalk.yellow('⚠️  AI brain connected but may have issues'));
+      }
+      
+    } catch (error) {
+      spinner.fail(chalk.red('❌ Failed to connect to AI brain'));
+      
+      if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
+        console.log(chalk.yellow('\n💡 Setup Instructions:'));
+        console.log(chalk.white('1. Get your API key from: https://makersuite.google.com/app/apikey'));
+        console.log(chalk.white('2. Copy .env.example to .env'));
+        console.log(chalk.white('3. Add your GEMINI_API_KEY to the .env file'));
+        console.log(chalk.gray('\nJARVIS will run in basic mode without AI responses.\n'));
+      }
+      
+      this.logger.warning('Running in basic mode without AI capabilities');
+    }
+  }
+
   private displayWelcome(): void {
     const welcomeMessage = boxen(
-      chalk.cyan.bold('🤖 JARVIS AI Assistant') + '\n\n' +
-      chalk.white('Your intelligent terminal companion') + '\n' +
-      chalk.gray('Type your requests in natural language') + '\n' +
-      chalk.gray('Type "exit" or "quit" to leave') + '\n' +
-      chalk.gray('Use Ctrl+C for immediate exit'),
+      chalk.cyan.bold('🤖 J.A.R.V.I.S') + chalk.white(' - Just A Rather Very Intelligent System') + '\n\n' +
+      chalk.white('🎯 Powered by Google Gemini AI') + '\n' +
+      chalk.white('🎵 Music control via Spotify ') + chalk.gray('(coming soon)') + '\n' +
+      chalk.white('📅 Calendar management ') + chalk.gray('(coming soon)') + '\n\n' +
+      chalk.green('Ready to assist with your requests!') + '\n' +
+      chalk.gray('Type naturally - exit with "quit" or Ctrl+C'),
       {
         padding: 1,
         margin: 1,
         borderStyle: 'round',
-        borderColor: 'cyan',
-        backgroundColor: 'black'
+        borderColor: 'cyan'
       }
     );
 
     console.clear();
     console.log(welcomeMessage);
-    
-    this.logger.info('JARVIS is ready! How can I assist you?');
   }
 
   private async handleUserInput(): Promise<void> {
     try {
+      // Clean prompt without extra text
       const response = await inquirer.prompt([
         {
           type: 'input',
           name: 'command',
-          message: chalk.cyan('🤖'),
+          message: chalk.blue('❯'),
           prefix: '',
         }
       ]);
@@ -75,10 +111,7 @@ export class JarvisCLI {
         return;
       }
 
-      // Display user input
-      this.logger.user(userInput);
-
-      // Process the command (placeholder for now)
+      // Process the command with AI or fallback
       await this.processCommand(userInput);
 
     } catch (error) {
@@ -91,42 +124,112 @@ export class JarvisCLI {
   }
 
   private async processCommand(input: string): Promise<void> {
-    // Placeholder processing - will integrate with Gemini later
-    this.logger.jarvis(`I received: "${input}"`);
-    this.logger.jarvis('Processing capabilities coming soon...');
-    
-    // Simulate some processing
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Basic responses for testing
-    if (input.toLowerCase().includes('hello') || input.toLowerCase().includes('hi')) {
-      this.logger.jarvis('Hello! I\'m JARVIS, your AI assistant. I\'m still learning, but I\'ll help you soon!');
-    } else if (input.toLowerCase().includes('help')) {
+    // Handle special commands
+    if (input.toLowerCase() === 'help') {
       this.displayHelp();
+      return;
+    }
+
+    if (input.toLowerCase() === 'clear') {
+      console.clear();
+      this.displayWelcome();
+      return;
+    }
+
+    // Use AI if available, otherwise fallback
+    if (this.geminiClient) {
+      await this.processWithAI(input);
     } else {
-      this.logger.jarvis('I understand you said something, but my full capabilities are still being developed. Coming soon!');
+      await this.processWithFallback(input);
     }
   }
 
-  private displayHelp(): void {
-    const helpText = `
-${chalk.cyan.bold('📚 JARVIS Help')}
+  private async processWithAI(input: string): Promise<void> {
+    // Show thinking indicator
+    const spinner = ora({
+      text: chalk.gray('JARVIS is thinking...'),
+      spinner: 'dots'
+    }).start();
 
-${chalk.white.bold('Available Commands:')}
-  ${chalk.green('hello, hi')} - Greet JARVIS
-  ${chalk.green('help')} - Show this help message
-  ${chalk.green('exit, quit')} - Exit JARVIS
+    try {
+      // Use streaming for better UX
+      const responseStream = await this.geminiClient!.generateStreamingResponse(input);
+      
+      spinner.stop();
+      
+      // Print response header
+      console.log(chalk.magenta.bold('\n🤖 JARVIS:'));
+      
+      let fullResponse = '';
+      
+      // Stream the response
+      for await (const chunk of responseStream) {
+        if (chunk.isPartial) {
+          process.stdout.write(chalk.white(chunk.text));
+          fullResponse += chunk.text;
+        }
+      }
+      
+      console.log('\n'); // Add newline after response
+      
+    } catch (error) {
+      spinner.fail(chalk.red('AI processing failed'));
+      this.logger.error('AI Error:', error);
+      
+      // Fallback to basic response
+      await this.processWithFallback(input);
+    }
+  }
 
-${chalk.white.bold('Coming Soon:')}
-  🎵 Spotify control (play, pause, search music)
-  📅 Calendar management (meetings, events)
-  📁 File operations (read, create, summarize)
-  🤖 Full AI conversation with Gemini
-
-${chalk.gray('Use natural language for all commands!')}
-    `;
+  private async processWithFallback(input: string): Promise<void> {
+    console.log(chalk.magenta.bold('\n🤖 JARVIS:'));
     
-    console.log(helpText);
+    // Simple pattern matching for basic responses
+    const lowerInput = input.toLowerCase();
+    
+    if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
+      console.log(chalk.white('Hello! I\'m JARVIS. My AI brain isn\'t connected yet, but I\'m still here to help!'));
+    } else if (lowerInput.includes('how are you')) {
+      console.log(chalk.white('I\'m operating in basic mode. Configure my AI connection for full capabilities!'));
+    } else if (lowerInput.includes('music') || lowerInput.includes('spotify')) {
+      console.log(chalk.white('Music controls are coming in Sprint 2.2! I\'ll be able to play your favorite tunes soon.'));
+    } else if (lowerInput.includes('calendar') || lowerInput.includes('meeting')) {
+      console.log(chalk.white('Calendar management is coming in Sprint 2.3! I\'ll help you schedule meetings soon.'));
+    } else {
+      console.log(chalk.white(`I heard "${input}" but my AI capabilities need setup. Check the instructions above for configuring GEMINI_API_KEY.`));
+    }
+    
+    console.log('');
+  }
+
+  private displayHelp(): void {
+    const helpBox = boxen(
+      chalk.cyan.bold('📚 JARVIS Command Reference') + '\n\n' +
+      
+      chalk.white.bold('🎯 Current Capabilities:') + '\n' +
+      chalk.green('  Natural conversation') + chalk.gray(' - Chat with AI intelligence\n') +
+      chalk.green('  help') + chalk.gray(' - Show this help\n') +
+      chalk.green('  clear') + chalk.gray(' - Clear screen\n') +
+      chalk.green('  quit/exit') + chalk.gray(' - Exit JARVIS\n\n') +
+      
+      chalk.white.bold('🚀 Coming Soon:') + '\n' +
+      chalk.yellow('  🎵 "play music"') + chalk.gray(' - Spotify integration\n') +
+      chalk.yellow('  📅 "schedule meeting"') + chalk.gray(' - Calendar management\n') +
+      chalk.yellow('  📁 "read file.txt"') + chalk.gray(' - File operations\n') +
+      chalk.yellow('  🎙️ Voice commands') + chalk.gray(' - Speech recognition\n\n') +
+      
+      chalk.white.bold('💡 Tips:') + '\n' +
+      chalk.gray('• Talk naturally - no special syntax needed\n') +
+      chalk.gray('• AI responses require GEMINI_API_KEY setup\n') +
+      chalk.gray('• Use Ctrl+C for immediate exit'),
+      {
+        padding: 1,
+        borderStyle: 'round',
+        borderColor: 'blue'
+      }
+    );
+    
+    console.log(helpBox);
   }
 
   private isExitCommand(input: string): boolean {
@@ -135,7 +238,7 @@ ${chalk.gray('Use natural language for all commands!')}
   }
 
   private async handleExit(): Promise<void> {
-    this.logger.jarvis('Goodbye! Have a great day! 👋');
+    console.log(chalk.magenta.bold('\n🤖 JARVIS:'), chalk.white('Powering down. Until next time! 👋\n'));
     this.isRunning = false;
   }
 
