@@ -1,6 +1,7 @@
 import { GeminiClient } from './gemini';
 import { ToolRegistry } from './tools/registry';
 import { ReadFileTool, WriteFileTool, ListDirectoryTool, GetCurrentTimeTool } from './tools/system';
+import { AddTaskTool, ListTasksTool, CompleteTaskTool, DeleteTaskTool } from './tools/tasks';
 import { 
   CurrentTrackTool,
   PlayMusicTool,
@@ -58,6 +59,12 @@ export class JarvisAgent {
     this.toolRegistry.registerTool(new WriteFileTool(this.logger));
     this.toolRegistry.registerTool(new ListDirectoryTool(this.logger));
     this.toolRegistry.registerTool(new GetCurrentTimeTool(this.logger));
+    
+    // Register task management tools
+    this.toolRegistry.registerTool(new AddTaskTool(this.logger));
+    this.toolRegistry.registerTool(new ListTasksTool(this.logger));
+    this.toolRegistry.registerTool(new CompleteTaskTool(this.logger));
+    this.toolRegistry.registerTool(new DeleteTaskTool(this.logger));
     
     // Register Spotify tools
     this.initializeSpotifyTools();

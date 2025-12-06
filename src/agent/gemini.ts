@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import { Logger } from '../utils/logger';
 import { ToolRegistry } from './tools/registry';
+import { ConversationMemory } from './memory';
 
 // Load environment variables
 dotenv.config();
@@ -11,22 +12,18 @@ export interface GeminiResponse {
   isPartial?: boolean;
 }
 
-export interface ConversationMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
 export class GeminiClient {
   private genAI: GoogleGenerativeAI;
   private model: any;
+  private chat: any;
   private logger: Logger;
-  private conversationHistory: ConversationMessage[] = [];
+  private memory: ConversationMemory;
   private toolRegistry: ToolRegistry | undefined;
 
-  constructor(logger: Logger, toolRegistry?: ToolRegistry) {
+  constructor(logger: Logger, toolRegistry?: ToolRegistry, memory?: ConversationMemory) {
     this.logger = logger;
     this.toolRegistry = toolRegistry;
+    this.memory = memory || new ConversationMemory(logger);
     
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -59,18 +56,23 @@ export class GeminiClient {
     }
     
     this.model = this.genAI.getGenerativeModel(modelConfig);
+    
+    // Initialize chat session with history
+    this.chat = this.model.startChat({
+      history: this.memory.getFormattedHistory()
+    });
 
-    this.logger.debug('Gemini client initialized successfully');
+    this.logger.debug('Gemini client initialized with conversation memory');
   }
 
   async generateResponse(userInput: string): Promise<GeminiResponse> {
     try {
       this.logger.debug(`Sending request to Gemini: "${userInput}"`);
       
-      // Add user message to history
-      this.addToHistory('user', userInput);
+      // Add user message to memory
+      this.memory.addUserMessage(userInput);
       
-      const result = await this.model.generateContent(userInput);
+      const result = await this.chat.sendMessage(userInput);
       const response = await result.response;
       
       // Check if the response contains function calls
@@ -119,7 +121,7 @@ export class GeminiClient {
         }
         
         const finalResponse = results.join('\n\n');
-        this.addToHistory('assistant', finalResponse);
+        this.memory.addModelMessage(finalResponse);
         return { text: finalResponse };
       }
       
@@ -130,7 +132,7 @@ export class GeminiClient {
         return { text: "I'm thinking about your request but didn't generate a response. Could you try rephrasing?" };
       }
 
-      this.addToHistory('assistant', text);
+      this.memory.addModelMessage(text);
       return { text: text.trim() };
       
     } catch (error) {
@@ -148,15 +150,15 @@ export class GeminiClient {
       try {
         self.logger.debug(`Streaming request to Gemini: "${userInput}"`);
         
-        // Add user message to history
-        self.addToHistory('user', userInput);
+        // Add user message to memory
+        self.memory.addUserMessage(userInput);
         
-        const contextMessages = self.conversationHistory
-          .slice(-10)
+        const messages = self.memory.getRecentMessages(10);
+        const contextMessages = messages
           .map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`)
           .join('\n');
         
-        const prompt = self.buildSystemPrompt() + '\n\nConversation:\n' + contextMessages + '\nHuman: ' + userInput + '\nAssistant:';
+        const prompt = 'Conversation:\n' + contextMessages + '\nHuman: ' + userInput + '\nAssistant:';
         
         const result = await self.model.generateContentStream(prompt);
         let fullResponse = '';
@@ -169,9 +171,9 @@ export class GeminiClient {
           }
         }
         
-        // Add final response to history
+        // Add final response to memory
         if (fullResponse.trim()) {
-          self.addToHistory('assistant', fullResponse.trim());
+          self.memory.addModelMessage(fullResponse.trim());
         }
         
       } catch (error) {
@@ -185,48 +187,21 @@ export class GeminiClient {
     return streamGenerator();
   }
 
-  private addToHistory(role: 'user' | 'assistant', content: string): void {
-    this.conversationHistory.push({
-      role,
-      content,
-      timestamp: new Date()
-    });
-
-    // Keep conversation history manageable (last 50 messages)
-    if (this.conversationHistory.length > 50) {
-      this.conversationHistory = this.conversationHistory.slice(-50);
-    }
-  }
-
-  private buildSystemPrompt(): string {
-    const toolsList = this.toolRegistry ? 
-      this.toolRegistry.getAvailableTools().map(t => `- ${t.name}: ${t.description}`).join('\n') : 
-      'No tools available';
-      
-    return `You are JARVIS, an intelligent AI assistant with access to system tools.
-
-IMPORTANT: When users ask for information that requires tools, USE THE AVAILABLE FUNCTIONS!
-
-Available Functions:
-${toolsList}
-
-Examples of when to use tools:
-- "What time is it?" → Call get_current_time
-- "List files" → Call list_directory  
-- "Read file X" → Call read_file
-- "Create file Y" → Call write_file
-
-Always use functions when appropriate instead of just describing what you could do.
-Be helpful, smart, and use your tools effectively to assist users.`;
-  }
-
   clearHistory(): void {
-    this.conversationHistory = [];
+    this.memory.clear();
+    // Restart chat session
+    this.chat = this.model.startChat({
+      history: this.memory.getFormattedHistory()
+    });
     this.logger.debug('Conversation history cleared');
   }
 
   getHistoryLength(): number {
-    return this.conversationHistory.length;
+    return this.memory.getStats().messageCount;
+  }
+  
+  getMemory(): ConversationMemory {
+    return this.memory;
   }
 
   async testConnection(): Promise<boolean> {
