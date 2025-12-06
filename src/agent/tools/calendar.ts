@@ -88,7 +88,7 @@ abstract class CalendarBaseTool extends BaseTool {
 export class ListEventsTool extends CalendarBaseTool {
   definition: ToolDefinition = {
     name: 'list_calendar_events',
-    description: 'List upcoming events from Google Calendar',
+    description: 'List upcoming events from Google Calendar. Use this for queries like "upcoming meetings", "this week", "next few days", or when user wants to see multiple future events.',
     category: 'calendar',
     parameters: [
       {
@@ -167,12 +167,64 @@ export class ListEventsTool extends CalendarBaseTool {
 }
 
 /**
+ * Parse natural language date to Date object
+ */
+function parseNaturalDate(dateStr: string): Date {
+  const str = dateStr.toLowerCase().trim();
+  const now = new Date();
+
+  // Handle "today"
+  if (str === 'today' || str === 'tod') {
+    return now;
+  }
+
+  // Handle "tomorrow"
+  if (str === 'tomorrow' || str === 'tmr') {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  }
+
+  // Handle "yesterday"
+  if (str === 'yesterday') {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  }
+
+  // Handle "next week"
+  if (str.includes('next week')) {
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return nextWeek;
+  }
+
+  // Handle "in X days"
+  const daysMatch = str.match(/in (\d+) days?/);
+  if (daysMatch && daysMatch[1]) {
+    const days = parseInt(daysMatch[1]);
+    const future = new Date(now);
+    future.setDate(future.getDate() + days);
+    return future;
+  }
+
+  // Try parsing as ISO or standard date format
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  // Default to today if parsing fails
+  return now;
+}
+
+/**
  * Get today's events
  */
 export class GetTodayEventsTool extends CalendarBaseTool {
   definition: ToolDefinition = {
     name: 'get_today_events',
-    description: "Get today's calendar events and meetings",
+    description: "Get today's calendar events and meetings for the current day. ALWAYS use this tool when user asks about: 'today', 'today's meetings', 'schedule for today', 'what's on my calendar', 'meetings for the day', 'my day', 'todays schedule', or any query referring to the current day without mentioning a specific different date. This is the DEFAULT tool for calendar queries about the present day.",
     category: 'calendar',
     parameters: []
   };
@@ -245,54 +297,122 @@ export class GetTodayEventsTool extends CalendarBaseTool {
 export class CreateEventTool extends CalendarBaseTool {
   definition: ToolDefinition = {
     name: 'create_calendar_event',
-    description: 'Create a new event in Google Calendar',
+    description: 'Create a new event in Google Calendar. When user says "today at 2pm" or "tomorrow at 3pm", use start_time as "today at 2pm" or "tomorrow at 3pm". When user says duration like "for 1 hour", set duration_minutes to 60. If no end time is mentioned, default to 60 minutes. Examples: "meeting today at 2pm" → start_time="today at 2pm", duration_minutes=60. "lunch tomorrow 1pm for 30 minutes" → start_time="tomorrow at 1pm", duration_minutes=30.',
     category: 'calendar',
     parameters: [
       {
         name: 'summary',
         type: 'string',
-        description: 'Event title/summary',
+        description: 'Event title/summary (e.g., "Team Meeting", "Lunch", "Call with client")',
         required: true
       },
       {
         name: 'start_time',
         type: 'string',
-        description: 'Start time in ISO format or natural language',
+        description: 'Start date and time. Use natural language: "today at 2pm", "tomorrow 9:30am", "today 14:00". If user says just "today", use current date.',
         required: true
       },
       {
-        name: 'end_time',
-        type: 'string',
-        description: 'End time in ISO format or natural language',
-        required: true
+        name: 'duration_minutes',
+        type: 'number',
+        description: 'Duration in minutes. Default: 60 (1 hour). Use 30 for half hour, 120 for 2 hours, etc.',
+        required: false
       },
       {
         name: 'description',
         type: 'string',
-        description: 'Event description',
+        description: 'Event description or notes',
         required: false
       },
       {
         name: 'location',
         type: 'string',
-        description: 'Event location',
+        description: 'Event location (office, Zoom link, etc.)',
         required: false
       }
     ]
   };
 
+  /**
+   * Parse natural language time like "2pm", "14:00", "3:30pm"
+   */
+  private parseTime(timeStr: string, baseDate: Date = new Date()): Date {
+    const str = timeStr.toLowerCase().trim();
+    const result = new Date(baseDate);
+
+    // Handle formats like "2pm", "2:30pm", "14:00"
+    const timeMatch = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+    if (timeMatch && timeMatch[1]) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+      const period = timeMatch[3];
+
+      if (period === 'pm' && hours !== 12) hours += 12;
+      if (period === 'am' && hours === 12) hours = 0;
+
+      result.setHours(hours, minutes, 0, 0);
+      return result;
+    }
+
+    // Try parsing full date string
+    const parsed = new Date(timeStr);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+
+    return result;
+  }
+
+  /**
+   * Parse natural language date and time combination
+   */
+  private parseDateTime(dateTimeStr: string): Date {
+    const str = dateTimeStr.toLowerCase().trim();
+
+    // Handle "today at 2pm", "tomorrow at 3:30pm"
+    const atMatch = str.match(/(.+?)\s+at\s+(.+)/);
+    if (atMatch && atMatch[1] && atMatch[2]) {
+      const datePart = atMatch[1];
+      const timePart = atMatch[2];
+      const baseDate = parseNaturalDate(datePart);
+      return this.parseTime(timePart, baseDate);
+    }
+
+    // Handle "today 2pm", "tomorrow 3pm"
+    const spaceMatch = str.match(/(.+?)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/);
+    if (spaceMatch && spaceMatch[1] && spaceMatch[2]) {
+      const datePart = spaceMatch[1];
+      const timePart = spaceMatch[2];
+      const baseDate = parseNaturalDate(datePart);
+      return this.parseTime(timePart, baseDate);
+    }
+
+    // Try as full date string
+    const parsed = new Date(dateTimeStr);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+
+    // Default to today
+    return parseNaturalDate(dateTimeStr);
+  }
+
   async execute(parameters: Record<string, any>): Promise<ToolResult> {
     try {
+      const startTime = this.parseDateTime(parameters.start_time);
+      const durationMinutes = parameters.duration_minutes || 60;
+      const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+
       const event = {
         summary: parameters.summary,
         description: parameters.description,
         location: parameters.location,
         start: {
-          dateTime: new Date(parameters.start_time).toISOString(),
+          dateTime: startTime.toISOString(),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         },
         end: {
-          dateTime: new Date(parameters.end_time).toISOString(),
+          dateTime: endTime.toISOString(),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         }
       };
@@ -325,7 +445,7 @@ export class CreateEventTool extends CalendarBaseTool {
 export class GetNextMeetingTool extends CalendarBaseTool {
   definition: ToolDefinition = {
     name: 'get_next_meeting',
-    description: 'Get the next upcoming meeting or event',
+    description: 'Get the next upcoming meeting or event. Use when user asks "when is my next meeting", "what\'s next", or similar queries about the immediate next event.',
     category: 'calendar',
     parameters: []
   };

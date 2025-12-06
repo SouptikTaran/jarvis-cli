@@ -11,9 +11,16 @@ import {
   PlayTrackTool,
   SetVolumeTool
 } from './tools/spotify';
+import {
+  ListEventsTool,
+  GetTodayEventsTool,
+  CreateEventTool,
+  GetNextMeetingTool
+} from './tools/calendar';
 import { Logger } from '../utils/logger';
 import { TokenStorage } from '../config/tokenStorage';
 import { SpotifyOAuth } from '../auth/spotify';
+import { GoogleOAuth } from '../auth/google';
 import { OAuthConfig } from '../auth/oauth';
 import * as dotenv from 'dotenv';
 
@@ -55,6 +62,9 @@ export class JarvisAgent {
     // Register Spotify tools
     this.initializeSpotifyTools();
     
+    // Register Google Calendar tools
+    this.initializeCalendarTools();
+    
     this.logger.verbose(`Initialized ${this.toolRegistry.getToolCount()} tools`);
   }
 
@@ -93,6 +103,36 @@ export class JarvisAgent {
       }
     } catch (error) {
       this.logger.error('Failed to initialize Spotify tools:', error);
+    }
+  }
+
+  private initializeCalendarTools(): void {
+    try {
+      const config: OAuthConfig = {
+        clientId: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+        redirectUri: 'http://127.0.0.1:8888/callback',
+        scopes: [
+          'https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/calendar.events'
+        ]
+      };
+
+      // Only register Calendar tools if credentials are present
+      if (config.clientId && config.clientSecret) {
+        const googleAuth = new GoogleOAuth(config, this.logger);
+
+        this.toolRegistry.registerTool(new ListEventsTool(this.tokenStorage, googleAuth, this.logger));
+        this.toolRegistry.registerTool(new GetTodayEventsTool(this.tokenStorage, googleAuth, this.logger));
+        this.toolRegistry.registerTool(new CreateEventTool(this.tokenStorage, googleAuth, this.logger));
+        this.toolRegistry.registerTool(new GetNextMeetingTool(this.tokenStorage, googleAuth, this.logger));
+
+        this.logger.debug('Registered 4 Google Calendar tools');
+      } else {
+        this.logger.debug('Google credentials not found, skipping Calendar tools');
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize Calendar tools:', error);
     }
   }
 
