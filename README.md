@@ -4,17 +4,27 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 
 ## ✨ Features
 
-### 🎯 Current (Sprint 1.1)
-- ✅ Interactive terminal interface
-- ✅ Natural language input processing
+### 🎯 Implemented
+- ✅ Interactive terminal interface with Inquirer
+- ✅ Natural language input processing via Gemini AI
+- ✅ Function calling system with tool registry
+- ✅ File operations (read, write, list files)
+- ✅ OAuth infrastructure for Spotify & Google Calendar
+- ✅ Secure token storage with AES-256-GCM encryption
+- ✅ **Spotify Integration**: 8 playback control tools
+  - Play, pause, next/previous track
+  - Get current track info
+  - Search music
+  - Set volume
+  - Play specific tracks
 - ✅ Graceful shutdown handling
 - ✅ Structured logging system
 
 ### 🚀 Coming Soon
-- 🎵 **Spotify Integration**: Play, pause, search music via voice commands
-- 📅 **Google Calendar**: Schedule meetings, check agenda
-- 🤖 **Gemini AI**: Full conversational AI with tool calling
-- 📁 **File Operations**: Read, create, summarize files
+- 📅 **Google Calendar Tools**: Schedule meetings, check agenda
+- 🎵 **Extended Spotify**: Playlists, shuffle, repeat modes
+- 💬 **Conversation Memory**: Multi-turn context
+- 🎨 **Better UX**: Command history, autocomplete
 - 🎙️ **Voice Mode**: Optional voice input/output
 
 ## 🛠️ Installation
@@ -38,21 +48,72 @@ npx jarvis
 
 ## 🎮 Usage
 
+### Environment Setup
+Create a `.env` file with your API credentials:
+
+```env
+# Required: Gemini AI
+GEMINI_API_KEY=your_gemini_api_key
+
+# Optional: Spotify Integration
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+
+# Optional: Google Calendar Integration  
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+### Authentication
+
 ```bash
-# Start interactive mode
+# Authenticate with Spotify
+jarvis auth spotify
+
+# Authenticate with Google Calendar
+jarvis auth google
+
+# Check authentication status
+jarvis auth status
+
+# Logout from a service
+jarvis auth logout spotify
+jarvis auth logout google
+jarvis auth logout all
+```
+
+### Interactive Mode
+
+```bash
+# Start JARVIS
 jarvis
 
-# Start with debug mode
+# Or with options
 jarvis --debug
+jarvis --verbose
+```
+
+Once in interactive mode, use natural language:
+- "What song is playing?"
+- "Pause the music"
+- "Search for Bohemian Rhapsody"
+- "Set volume to 50"
+- "List files in this directory"
+- "Read the package.json file"
+- "What time is it?"
+
+### Command Line Interface
+
+```bash
+# Start with specific command
+jarvis start
+
+# Authentication commands
+jarvis auth <command>
 
 # Show help
 jarvis --help
 ```
-
-### Basic Commands (Current)
-- `hello` - Greet JARVIS
-- `help` - Show available commands  
-- `exit` - Exit the application
 
 ## 🏗️ Development
 
@@ -79,25 +140,39 @@ npm run build
 ### Project Structure
 ```
 src/
-├── index.ts              # Main entry point
+├── index.ts              # Main entry point with CLI commands
 ├── cli/
-│   └── interface.ts      # Terminal UI interface
-├── agent/                # AI agent logic (coming soon)
-├── auth/                 # OAuth integrations (coming soon)
-├── config/               # Configuration management
+│   └── interface.ts      # Terminal UI with Inquirer
+├── agent/
+│   ├── core.ts           # Main agent coordinator
+│   ├── gemini.ts         # Gemini AI client
+│   └── tools/
+│       ├── base.ts       # Tool abstraction
+│       ├── registry.ts   # Tool registry system
+│       ├── system.ts     # File & system tools
+│       └── spotify.ts    # Spotify playback tools
+├── auth/
+│   ├── oauth.ts          # OAuth base provider
+│   ├── spotify.ts        # Spotify OAuth
+│   └── google.ts         # Google OAuth
+├── config/
+│   ├── encryption.ts     # AES-256-GCM encryption
+│   └── tokenStorage.ts   # Secure token management
 └── utils/
     └── logger.ts         # Logging utilities
 ```
 
 ## 📋 Development Roadmap
 
-### Phase 1: Foundation (Week 1)
-- [x] **Sprint 1.1**: Project setup + Basic CLI ← *Current*
-- [ ] **Sprint 1.2**: Gemini AI integration
-- [ ] **Sprint 1.3**: Tool calling system
+### Phase 1: Foundation ✅ COMPLETE
+- [x] **Sprint 1.1**: Project setup + Basic CLI
+- [x] **Sprint 1.2**: Gemini AI integration + Tool calling
+- [x] **Sprint 1.3**: Function calling fixes
 
-### Phase 2: Integrations (Week 2)  
-- [ ] **Sprint 2.1**: OAuth infrastructure
+### Phase 2: Integrations ⚡ IN PROGRESS
+- [x] **Sprint 2.1**: OAuth infrastructure + Spotify tools ← *Current*
+- [ ] **Sprint 2.2**: Google Calendar tools
+- [ ] **Sprint 2.3**: Extended Spotify features
 - [ ] **Sprint 2.2**: Spotify integration
 - [ ] **Sprint 2.3**: Google Calendar integration
 
