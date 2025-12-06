@@ -48,10 +48,14 @@ export class GeminiClient {
     
     // Add function definitions if tools are available
     if (this.toolRegistry && this.toolRegistry.getToolCount() > 0) {
+      const functionDefs = this.toolRegistry.getFunctionDefinitions();
       modelConfig.tools = [{
-        functionDeclarations: this.toolRegistry.getFunctionDefinitions()
+        functionDeclarations: functionDefs
       }];
       this.logger.debug(`Configured model with ${this.toolRegistry.getToolCount()} tools`);
+      this.logger.debug('Function definitions:', JSON.stringify(functionDefs, null, 2));
+    } else {
+      this.logger.debug('No tools available - model configured without functions');
     }
     
     this.model = this.genAI.getGenerativeModel(modelConfig);
@@ -66,17 +70,32 @@ export class GeminiClient {
       // Add user message to history
       this.addToHistory('user', userInput);
       
+      // Debug: Check if tools are available
+      if (this.toolRegistry) {
+        this.logger.debug(`Tools available: ${this.toolRegistry.getToolCount()}`);
+      } else {
+        this.logger.debug('No tool registry available');
+      }
+      
       const result = await this.model.generateContent(userInput);
       const response = await result.response;
+      
+      // Debug: Log full response structure
+      this.logger.debug('Full Gemini response:', JSON.stringify(response, null, 2));
       
       // Check if the response contains function calls
       const candidates = response.candidates || [];
       let functionCalls: any[] = [];
       
+      this.logger.debug(`Found ${candidates.length} candidates in response`);
+      
       if (candidates.length > 0) {
         const content = candidates[0].content;
+        this.logger.debug('Content structure:', JSON.stringify(content, null, 2));
+        
         if (content && content.parts) {
           functionCalls = content.parts.filter((part: any) => part.functionCall);
+          this.logger.debug(`Found ${functionCalls.length} function calls in response`);
         }
       }
       
