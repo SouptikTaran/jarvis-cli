@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import boxen from 'boxen';
 import ora from 'ora';
 import { Logger } from '../utils/logger';
-import { GeminiClient } from '../agent/gemini';
+import { JarvisAgent } from '../agent/core';
 
 export interface CLIOptions {
   verbose?: boolean;
@@ -12,7 +12,7 @@ export interface CLIOptions {
 
 export class JarvisCLI {
   private logger: Logger;
-  private geminiClient: GeminiClient | null = null;
+  private jarvisAgent: JarvisAgent | null = null;
   private isRunning: boolean = false;
 
   constructor(private options: CLIOptions = {}) {
@@ -23,8 +23,8 @@ export class JarvisCLI {
     try {
       this.displayWelcome();
       
-      // Initialize Gemini client
-      await this.initializeGemini();
+      // Initialize JARVIS Agent
+      await this.initializeAgent();
       
       this.isRunning = true;
 
@@ -37,17 +37,18 @@ export class JarvisCLI {
     }
   }
 
-  private async initializeGemini(): Promise<void> {
-    const spinner = ora('Connecting to JARVIS AI brain...').start();
+  private async initializeAgent(): Promise<void> {
+    const spinner = ora('Initializing JARVIS AI brain and tools...').start();
     
     try {
-      this.geminiClient = new GeminiClient(this.logger);
+      this.jarvisAgent = new JarvisAgent(this.options);
       
       // Test the connection
-      const isConnected = await this.geminiClient.testConnection();
+      const isConnected = await this.jarvisAgent.testConnection();
       
       if (isConnected) {
-        spinner.succeed(chalk.green('🧠 JARVIS AI brain online and ready!'));
+        const toolCount = this.jarvisAgent.getAvailableTools().length;
+        spinner.succeed(chalk.green(`🧠 JARVIS AI online with ${toolCount} tools ready!`));
       } else {
         spinner.warn(chalk.yellow('⚠️  AI brain connected but may have issues'));
       }
@@ -137,7 +138,7 @@ export class JarvisCLI {
     }
 
     // Use AI if available, otherwise fallback
-    if (this.geminiClient) {
+    if (this.jarvisAgent) {
       await this.processWithAI(input);
     } else {
       await this.processWithFallback(input);
@@ -153,7 +154,7 @@ export class JarvisCLI {
 
     try {
       // Use streaming for better UX
-      const responseStream = await this.geminiClient!.generateStreamingResponse(input);
+      const responseStream = await this.jarvisAgent!.processStreamingRequest(input);
       
       spinner.stop();
       
@@ -164,10 +165,8 @@ export class JarvisCLI {
       
       // Stream the response
       for await (const chunk of responseStream) {
-        if (chunk.isPartial) {
-          process.stdout.write(chalk.white(chunk.text));
-          fullResponse += chunk.text;
-        }
+        process.stdout.write(chalk.white(chunk));
+        fullResponse += chunk;
       }
       
       console.log('\n'); // Add newline after response

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import { Logger } from '../utils/logger';
+import { ToolRegistry } from './tools/registry';
 
 // Load environment variables
 dotenv.config();
@@ -21,9 +22,11 @@ export class GeminiClient {
   private model: any;
   private logger: Logger;
   private conversationHistory: ConversationMessage[] = [];
+  private toolRegistry: ToolRegistry | undefined;
 
-  constructor(logger: Logger) {
+  constructor(logger: Logger, toolRegistry?: ToolRegistry) {
     this.logger = logger;
+    this.toolRegistry = toolRegistry;
     
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -31,7 +34,9 @@ export class GeminiClient {
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ 
+    
+    // Configure model with or without tools
+    const modelConfig: any = {
       model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7,
@@ -39,7 +44,17 @@ export class GeminiClient {
         topP: 0.8,
         maxOutputTokens: 1024,
       }
-    });
+    };
+    
+    // Add function definitions if tools are available
+    if (this.toolRegistry && this.toolRegistry.getToolCount() > 0) {
+      modelConfig.tools = [{
+        functionDeclarations: this.toolRegistry.getFunctionDefinitions()
+      }];
+      this.logger.debug(`Configured model with ${this.toolRegistry.getToolCount()} tools`);
+    }
+    
+    this.model = this.genAI.getGenerativeModel(modelConfig);
 
     this.logger.debug('Gemini client initialized successfully');
   }
@@ -51,23 +66,58 @@ export class GeminiClient {
       // Add user message to history
       this.addToHistory('user', userInput);
       
-      // Create context from conversation history
-      const contextMessages = this.conversationHistory
-        .slice(-10) // Keep last 10 messages for context
-        .map(msg => `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`)
-        .join('\n');
-      
-      const prompt = this.buildSystemPrompt() + '\n\nConversation:\n' + contextMessages + '\nHuman: ' + userInput + '\nAssistant:';
-      
-      const result = await this.model.generateContent(prompt);
+      const result = await this.model.generateContent(userInput);
       const response = await result.response;
+      
+      // Check if the response contains function calls
+      const functionCalls = response.functionCalls?.() || [];
+      
+      if (functionCalls.length > 0 && this.toolRegistry) {
+        // Process function calls
+        let responseText = '';
+        
+        for (const functionCall of functionCalls) {
+          const { name, args } = functionCall;
+          this.logger.debug(`Executing function: ${name}`, args);
+          
+          const toolResult = await this.toolRegistry.executeTool(name, args);
+          
+          if (toolResult.success) {
+            responseText += `✅ ${toolResult.message || `Executed ${name} successfully`}\n`;
+            if (toolResult.data) {
+              responseText += `Result: ${JSON.stringify(toolResult.data, null, 2)}\n`;
+            }
+          } else {
+            responseText += `❌ Error executing ${name}: ${toolResult.error}\n`;
+          }
+        }
+        
+        // Generate follow-up response with function results
+        const functionResponses = functionCalls.map((fc: any) => ({
+          functionResponse: {
+            name: fc.name,
+            response: { result: responseText }
+          }
+        }));
+        
+        const followUpResult = await this.model.generateContent([
+          { text: userInput },
+          ...functionResponses
+        ]);
+        
+        const followUpText = followUpResult.response.text();
+        this.addToHistory('assistant', followUpText);
+        
+        return { text: followUpText.trim() };
+      }
+      
+      // Regular text response
       const text = response.text();
-
+      
       if (!text || text.trim().length === 0) {
         throw new Error('Empty response from Gemini');
       }
 
-      // Add assistant response to history
       this.addToHistory('assistant', text);
       
       this.logger.debug(`Received response from Gemini: "${text.substring(0, 100)}..."`);
@@ -77,7 +127,6 @@ export class GeminiClient {
     } catch (error) {
       this.logger.error('Gemini API Error:', error);
       
-      // Fallback response
       return {
         text: "I'm having trouble connecting to my AI brain right now. Please try again in a moment, or check if your GEMINI_API_KEY is configured correctly."
       };
