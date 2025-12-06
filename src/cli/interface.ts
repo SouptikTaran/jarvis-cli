@@ -207,6 +207,9 @@ export class JarvisCLI {
       
       chalk.white.bold('🎯 Current Capabilities:') + '\n' +
       chalk.green('  Natural conversation') + chalk.gray(' - Chat with AI intelligence\n') +
+      chalk.green('  "what time is it?"') + chalk.gray(' - Get current time\n') +
+      chalk.green('  "list files"') + chalk.gray(' - Show directory contents\n') +
+      chalk.green('  "read filename.txt"') + chalk.gray(' - Read file contents\n') +
       chalk.green('  help') + chalk.gray(' - Show this help\n') +
       chalk.green('  clear') + chalk.gray(' - Clear screen\n') +
       chalk.green('  quit/exit') + chalk.gray(' - Exit JARVIS\n\n') +

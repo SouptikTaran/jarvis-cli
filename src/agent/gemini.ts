@@ -70,14 +70,25 @@ export class GeminiClient {
       const response = await result.response;
       
       // Check if the response contains function calls
-      const functionCalls = response.functionCalls?.() || [];
+      const candidates = response.candidates || [];
+      let functionCalls: any[] = [];
+      
+      if (candidates.length > 0) {
+        const content = candidates[0].content;
+        if (content && content.parts) {
+          functionCalls = content.parts.filter((part: any) => part.functionCall);
+        }
+      }
       
       if (functionCalls.length > 0 && this.toolRegistry) {
         // Process function calls
         let responseText = '';
         
-        for (const functionCall of functionCalls) {
-          const { name, args } = functionCall;
+        for (const part of functionCalls) {
+          const functionCall = part.functionCall;
+          const name = functionCall.name;
+          const args = functionCall.args || {};
+          
           this.logger.debug(`Executing function: ${name}`, args);
           
           const toolResult = await this.toolRegistry.executeTool(name, args);
@@ -92,23 +103,11 @@ export class GeminiClient {
           }
         }
         
-        // Generate follow-up response with function results
-        const functionResponses = functionCalls.map((fc: any) => ({
-          functionResponse: {
-            name: fc.name,
-            response: { result: responseText }
-          }
-        }));
+        // For now, return the tool results directly with a simple summary
+        const summary = `I executed ${functionCalls.length} tool(s) for you:\n\n${responseText}`;
         
-        const followUpResult = await this.model.generateContent([
-          { text: userInput },
-          ...functionResponses
-        ]);
-        
-        const followUpText = followUpResult.response.text();
-        this.addToHistory('assistant', followUpText);
-        
-        return { text: followUpText.trim() };
+        this.addToHistory('assistant', summary);
+        return { text: summary };
       }
       
       // Regular text response
@@ -191,20 +190,25 @@ export class GeminiClient {
   }
 
   private buildSystemPrompt(): string {
-    return `You are JARVIS, an intelligent AI assistant inspired by Tony Stark's AI companion. You are:
+    const toolsList = this.toolRegistry ? 
+      this.toolRegistry.getAvailableTools().map(t => `- ${t.name}: ${t.description}`).join('\n') : 
+      'No tools available';
+      
+    return `You are JARVIS, an intelligent AI assistant with access to system tools.
 
-- Helpful, smart, and slightly witty
-- Knowledgeable about technology, programming, and general topics
-- Capable of helping with tasks, answering questions, and having conversations
-- Concise but thorough in your responses
-- Professional yet friendly
+IMPORTANT: When users ask for information that requires tools, USE THE AVAILABLE FUNCTIONS!
 
-Current capabilities:
-- Natural language conversation
-- General knowledge and assistance
-- Soon: Spotify music control, Google Calendar management, file operations
+Available Functions:
+${toolsList}
 
-Respond naturally and helpfully to the user's requests. Keep responses conversational and engaging.`;
+Examples of when to use tools:
+- "What time is it?" → Call get_current_time
+- "List files" → Call list_directory  
+- "Read file X" → Call read_file
+- "Create file Y" → Call write_file
+
+Always use functions when appropriate instead of just describing what you could do.
+Be helpful, smart, and use your tools effectively to assist users.`;
   }
 
   clearHistory(): void {
