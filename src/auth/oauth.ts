@@ -33,7 +33,7 @@ export abstract class OAuthProvider {
     return new Promise((resolve, reject) => {
       const app = express();
       const server = app.listen(8888, () => {
-        this.logger.info('OAuth server started on http://localhost:8888');
+        this.logger.info('OAuth server started on http://127.0.0.1:8888');
       });
 
       // Callback endpoint
