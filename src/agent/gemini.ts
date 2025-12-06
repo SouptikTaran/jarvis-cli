@@ -35,9 +35,9 @@ export class GeminiClient {
 
     this.genAI = new GoogleGenerativeAI(apiKey);
     
-    // Configure model with or without tools
+    // Configure model with or without tools  
     const modelConfig: any = {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-flash-lite',
       generationConfig: {
         temperature: 0.7,
         topK: 40,
@@ -70,83 +70,73 @@ export class GeminiClient {
       // Add user message to history
       this.addToHistory('user', userInput);
       
-      // Debug: Check if tools are available
-      if (this.toolRegistry) {
-        this.logger.debug(`Tools available: ${this.toolRegistry.getToolCount()}`);
-      } else {
-        this.logger.debug('No tool registry available');
-      }
-      
       const result = await this.model.generateContent(userInput);
       const response = await result.response;
-      
-      // Debug: Log full response structure
-      this.logger.debug('Full Gemini response:', JSON.stringify(response, null, 2));
       
       // Check if the response contains function calls
       const candidates = response.candidates || [];
       let functionCalls: any[] = [];
       
-      this.logger.debug(`Found ${candidates.length} candidates in response`);
-      
       if (candidates.length > 0) {
         const content = candidates[0].content;
-        this.logger.debug('Content structure:', JSON.stringify(content, null, 2));
-        
         if (content && content.parts) {
           functionCalls = content.parts.filter((part: any) => part.functionCall);
-          this.logger.debug(`Found ${functionCalls.length} function calls in response`);
         }
       }
       
       if (functionCalls.length > 0 && this.toolRegistry) {
+        this.logger.debug(`Processing ${functionCalls.length} function calls`);
+        
         // Process function calls
-        let responseText = '';
+        let results: string[] = [];
         
         for (const part of functionCalls) {
           const functionCall = part.functionCall;
           const name = functionCall.name;
           const args = functionCall.args || {};
           
-          this.logger.debug(`Executing function: ${name}`, args);
-          
-          const toolResult = await this.toolRegistry.executeTool(name, args);
-          
-          if (toolResult.success) {
-            responseText += `✅ ${toolResult.message || `Executed ${name} successfully`}\n`;
-            if (toolResult.data) {
-              responseText += `Result: ${JSON.stringify(toolResult.data, null, 2)}\n`;
+          try {
+            const toolResult = await this.toolRegistry.executeTool(name, args);
+            
+            if (toolResult.success && toolResult.data) {
+              // Format the result nicely based on the tool
+              if (name === 'get_current_time') {
+                results.push(`Current time: ${toolResult.data.formatted}`);
+              } else if (name === 'list_directory') {
+                const data = toolResult.data;
+                results.push(`Found ${data.files.length} files and ${data.directories.length} directories:\n\nFiles: ${data.files.slice(0, 10).join(', ')}${data.files.length > 10 ? '...' : ''}\nDirectories: ${data.directories.join(', ')}`);
+              } else if (name === 'read_file') {
+                results.push(`File content:\n\n${toolResult.data}`);
+              } else {
+                results.push(toolResult.message || `Executed ${name} successfully`);
+              }
+            } else {
+              results.push(`Error: ${toolResult.error}`);
             }
-          } else {
-            responseText += `❌ Error executing ${name}: ${toolResult.error}\n`;
+          } catch (error) {
+            results.push(`Error executing ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           }
         }
         
-        // For now, return the tool results directly with a simple summary
-        const summary = `I executed ${functionCalls.length} tool(s) for you:\n\n${responseText}`;
-        
-        this.addToHistory('assistant', summary);
-        return { text: summary };
+        const finalResponse = results.join('\n\n');
+        this.addToHistory('assistant', finalResponse);
+        return { text: finalResponse };
       }
       
       // Regular text response
       const text = response.text();
       
       if (!text || text.trim().length === 0) {
-        throw new Error('Empty response from Gemini');
+        return { text: "I'm thinking about your request but didn't generate a response. Could you try rephrasing?" };
       }
 
       this.addToHistory('assistant', text);
-      
-      this.logger.debug(`Received response from Gemini: "${text.substring(0, 100)}..."`);
-      
       return { text: text.trim() };
       
     } catch (error) {
       this.logger.error('Gemini API Error:', error);
-      
       return {
-        text: "I'm having trouble connecting to my AI brain right now. Please try again in a moment, or check if your GEMINI_API_KEY is configured correctly."
+        text: `I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
       };
     }
   }

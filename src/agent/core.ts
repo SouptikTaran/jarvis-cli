@@ -51,13 +51,10 @@ export class JarvisAgent {
     
     async function* streamGenerator(): AsyncGenerator<string, void, unknown> {
       try {
-        const responseStream = await self.geminiClient.generateStreamingResponse(userInput);
-        
-        for await (const chunk of responseStream) {
-          if (chunk.text) {
-            yield chunk.text;
-          }
-        }
+        // Use non-streaming for function calls (they need to be executed before returning)
+        // Streaming only works well for pure text responses
+        const response = await self.geminiClient.generateResponse(userInput);
+        yield response.text;
       } catch (error) {
         self.logger.error('Agent streaming error:', error);
         yield "I encountered an error processing your request. Please try again.";

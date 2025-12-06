@@ -24,6 +24,7 @@ export class ReadFileTool extends BaseTool {
 
   async execute(parameters: Record<string, any>): Promise<ToolResult> {
     try {
+      this.logger.debug('ReadFileTool received parameters:', parameters);
       const { filepath } = parameters;
       const resolvedPath = path.resolve(filepath);
       
