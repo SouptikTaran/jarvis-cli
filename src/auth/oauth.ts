@@ -32,8 +32,8 @@ export abstract class OAuthProvider {
   async authenticate(): Promise<OAuthTokens> {
     return new Promise((resolve, reject) => {
       const app = express();
-      const server = app.listen(8888, () => {
-        this.logger.info('OAuth server started on http://127.0.0.1:8888');
+      const server = app.listen(8888, '0.0.0.0', () => {
+        this.logger.info(`OAuth server started on ${this.config.redirectUri.replace('/callback', '')}`);
       });
 
       // Timeout to prevent hanging

@@ -180,7 +180,7 @@ export class JarvisCLI {
       const config: OAuthConfig = {
         clientId: process.env.GOOGLE_CLIENT_ID || '',
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-        redirectUri: 'http://127.0.0.1:8888/callback',
+        redirectUri: 'http://localhost:8888/callback',
         scopes: [
           'https://www.googleapis.com/auth/calendar.readonly',
           'https://www.googleapis.com/auth/calendar.events',
