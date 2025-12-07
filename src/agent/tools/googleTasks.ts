@@ -74,6 +74,11 @@ abstract class GoogleTasksBaseTool extends BaseTool {
         throw new Error(`Google Tasks API error (${response.status}): ${error}`);
       }
 
+      // DELETE requests return 204 No Content with empty body
+      if (response.status === 204 || method === 'DELETE') {
+        return null;
+      }
+
       return await response.json();
     } catch (error) {
       this.logger.error('Google Tasks API request failed:', error);
