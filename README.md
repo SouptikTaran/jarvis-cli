@@ -9,10 +9,20 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 - ✅ **Conversation Memory**: Multi-turn conversations with context
 - ✅ Natural language input processing via Gemini AI
 - ✅ Function calling system with tool registry (29 tools total)
+- ✅ **Comprehensive Help System**
+  - Interactive tutorial for first-time users
+  - Categorized command reference
+  - Built-in examples for all features
 - ✅ **Secure Credential Storage**: Encrypted API key management
   - First-run interactive setup for Gemini API key
   - Optional Spotify and Google credentials
   - AES-256-GCM encrypted storage in ~/.jarvis/
+  - Backup and restore capabilities
+- ✅ **Intelligent Error Handling**
+  - Contextual error messages with solutions
+  - Automatic detection of API key issues
+  - OAuth troubleshooting guidance
+  - Network error recovery suggestions
 - ✅ File operations (read, write, list files)
 - ✅ **Google Tasks Integration**: Sync tasks across all devices
   - Add, list, complete, delete tasks
@@ -65,6 +75,21 @@ npm start
 npx jarvis
 ```
 
+## 📚 Quick Start
+
+### First Time Users
+
+```bash
+# Run the interactive tutorial
+jarvis tutorial
+
+# Or view help
+jarvis help
+
+# Check system status
+jarvis status
+```
+
 ## 🎮 Usage
 
 ### First Run - Interactive Setup
@@ -101,116 +126,84 @@ All credentials are **encrypted with AES-256-GCM** and stored in `~/.jarvis/cred
 - Google Client ID & Secret from [Google Cloud Console](https://console.cloud.google.com)
 - Enables: Calendar, Gmail, and Tasks APIs
 
-### Manual Credential Management
+### Command Line Interface
 
 ```bash
-# Interactive setup/update credentials
-node dist/index.js config setup
-
-# Show credential status (masked)
-node dist/index.js config show
-
-# Reset all credentials
-node dist/index.js config reset
-```
-
-### Alternative: Environment Variables
-You can still use `.env` file if you prefer:
-
-```env
-# Required: Gemini AI
-GEMINI_API_KEY=your_gemini_api_key
-
-# Optional: Spotify Integration
-SPOTIFY_CLIENT_ID=your_spotify_client_id
-SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-
-# Optional: Google Services
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-```
-
-### OAuth Authentication
-
-```bash
-# Authenticate with Spotify
-node dist/index.js auth spotify
-
-# Authenticate with Google (Calendar, Gmail, Tasks)
-node dist/index.js auth google
-
-# Check authentication status
-node dist/index.js auth status
-
-# Logout from services
-node dist/index.js auth logout all
-```
-
-# Check authentication status
-jarvis auth status
-
-# Logout from a service
-jarvis auth logout spotify
-jarvis auth logout google
-jarvis auth logout all
-```
-
-### Interactive Mode
-
-```bash
-# Start JARVIS
+# Start interactive chat
 jarvis
+jarvis start
+jarvis chat         # Alias for start
 
-# Or with options
-jarvis --debug
-jarvis --verbose
+# Help & Documentation
+jarvis help         # Comprehensive command reference
+jarvis tutorial     # Interactive learning experience
+jarvis status       # System health & service status
+
+# Configuration Management
+jarvis config setup              # Interactive credential setup
+jarvis config show               # View credential status (masked)
+jarvis config reset              # Delete all credentials
+jarvis config update-gemini      # Update Gemini API key
+jarvis config test-connection    # Test AI connection
+jarvis config backup [path]      # Backup credentials
+jarvis config restore <path>     # Restore from backup
+
+# Authentication
+jarvis auth spotify              # Authenticate Spotify
+jarvis auth google               # Authenticate Google services
+jarvis auth status               # Check auth status
+jarvis auth logout <service>     # Logout (spotify/google/all)
+
+# Version & Help
+jarvis --version    # Show version
+jarvis --help       # Show help
 ```
 
-Once in interactive mode, use natural language:
+### Natural Language Examples
 
-**Spotify:**
+**General AI:**
+- "What is TypeScript?"
+- "Explain quantum computing simply"
+- "Write a Python function to reverse a string"
+
+**Spotify Control:**
 - "What song is playing?"
 - "Pause the music"
 - "Search for Bohemian Rhapsody"
 - "Set volume to 50"
+- "Play some jazz"
+- "Next song"
 
-**Calendar:**
+**Calendar Management:**
 - "What's on my calendar today?"
 - "When is my next meeting?"
 - "Create a meeting tomorrow at 2pm called Team Sync"
+- "List my events this week"
 
-**Email:**
+**Email (Gmail):**
 - "How many unread emails do I have?"
 - "Show me my recent emails"
 - "Send an email to john@example.com about the project"
+- "Search emails about budget"
 
-**Tasks:**
+**Tasks (Google Tasks):**
 - "Add a task to finish the report"
 - "Show my tasks"
 - "Complete task 1"
+- "Delete task about meeting"
+- "What tasks are overdue?"
 
-**Git:**
+**Git Operations:**
 - "Commit the current code"
 - "Push the changes"
 - "What's the git status?"
+- "Show git log"
+- "Create branch feature-x"
 
-**Files:**
+**File Operations:**
 - "List files in this directory"
 - "Read the package.json file"
 - "What time is it?"
-
-### Command Line Interface
-
-```bash
-# Start with specific command
-jarvis start
-
-# Authentication commands
-jarvis auth <command>
-
-# Show help
-jarvis --help
-```
 
 ## 🏗️ Development
 
