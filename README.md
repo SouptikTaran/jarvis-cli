@@ -67,19 +67,39 @@ npx jarvis
 
 ## 🎮 Usage
 
-### First Run Setup
-On your first run, JARVIS will automatically prompt you to enter your API credentials:
+### First Run - Interactive Setup
+On your first run, JARVIS will guide you through a complete setup:
 
 ```bash
 npm start
 ```
 
-You'll be asked to provide:
-- **Gemini API Key** (required) - Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
-- **Spotify credentials** (optional) - Get from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-- **Google credentials** (optional) - Get from [Google Cloud Console](https://console.cloud.google.com)
+**Setup Steps:**
+1. **Gemini API Key** (Required)
+   - Get free key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+   
+2. **Choose Optional Services:**
+   - 🎵 **Spotify** - Music control and playback
+   - 📅 **Google** - Calendar, Gmail, and Tasks
+   - ✨ **Both** - Full integration
+   - ⏭️ **Skip** - Set up later
 
-All credentials are **encrypted and stored securely** in `~/.jarvis/credentials.json`.
+3. **Automatic Authentication**
+   - If you choose Spotify or Google, JARVIS will automatically:
+     - Open your browser for OAuth
+     - Save encrypted access tokens
+     - Test the connection
+
+All credentials are **encrypted with AES-256-GCM** and stored in `~/.jarvis/credentials.json`.
+
+### What You'll Need
+
+**For Spotify Integration:**
+- Spotify Client ID & Secret from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+
+**For Google Services:**
+- Google Client ID & Secret from [Google Cloud Console](https://console.cloud.google.com)
+- Enables: Calendar, Gmail, and Tasks APIs
 
 ### Manual Credential Management
 

@@ -5,6 +5,10 @@ import ora from 'ora';
 import { Logger } from '../utils/logger';
 import { JarvisAgent } from '../agent/core';
 import { CredentialStorage } from '../config/credentialStorage';
+import { TokenStorage } from '../config/tokenStorage';
+import { SpotifyOAuth } from '../auth/spotify';
+import { GoogleOAuth } from '../auth/google';
+import { OAuthConfig } from '../auth/oauth';
 
 export interface CLIOptions {
   verbose?: boolean;
@@ -48,82 +52,185 @@ export class JarvisCLI {
     const hasGemini = await this.credentialStorage.hasCredential('geminiApiKey');
     
     if (!hasGemini) {
-      console.log(chalk.yellow('\n🔐 First-time setup detected!'));
-      console.log(chalk.white('Let\'s configure your API credentials.\n'));
+      console.log(chalk.yellow('\n🎉 Welcome to JARVIS! Let\'s get you set up.\n'));
 
-      const answers = await inquirer.prompt([
+      // Step 1: Gemini API Key (Required)
+      console.log(chalk.cyan.bold('Step 1: Gemini AI Setup (Required)'));
+      console.log(chalk.gray('Get your free API key from: https://makersuite.google.com/app/apikey\n'));
+
+      const geminiAnswer = await inquirer.prompt([
         {
           type: 'input',
           name: 'geminiApiKey',
-          message: 'Enter your Gemini API Key (required):',
+          message: 'Enter your Gemini API Key:',
           validate: (input: string) => {
             if (!input || input.trim().length === 0) {
-              return 'Gemini API key is required. Get one from: https://makersuite.google.com/app/apikey';
+              return 'Gemini API key is required';
             }
             return true;
           }
-        },
-        {
-          type: 'confirm',
-          name: 'setupOptional',
-          message: 'Would you like to setup optional services (Spotify, Google Calendar/Tasks)?',
-          default: false
         }
       ]);
 
       const credentials: any = {
-        geminiApiKey: answers.geminiApiKey.trim()
+        geminiApiKey: geminiAnswer.geminiApiKey.trim()
       };
 
-      if (answers.setupOptional) {
-        const optionalAnswers = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'spotifyClientId',
-            message: 'Spotify Client ID (press Enter to skip):',
-          },
-          {
-            type: 'input',
-            name: 'spotifyClientSecret',
-            message: 'Spotify Client Secret (press Enter to skip):',
-            when: (answers: any) => !!answers.spotifyClientId
-          },
-          {
-            type: 'input',
-            name: 'googleClientId',
-            message: 'Google Client ID (press Enter to skip):',
-          },
-          {
-            type: 'input',
-            name: 'googleClientSecret',
-            message: 'Google Client Secret (press Enter to skip):',
-            when: (answers: any) => !!answers.googleClientId
-          }
-        ]);
+      // Step 2: Optional Services
+      console.log(chalk.cyan.bold('\n\nStep 2: Optional Integrations'));
+      console.log(chalk.gray('Set up Spotify and Google services for enhanced features.\n'));
 
-        // Add optional credentials if provided
-        if (optionalAnswers.spotifyClientId) {
-          credentials.spotifyClientId = optionalAnswers.spotifyClientId.trim();
-          credentials.spotifyClientSecret = optionalAnswers.spotifyClientSecret?.trim();
+      const setupChoice = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'choice',
+          message: 'What would you like to set up?',
+          choices: [
+            { name: '🎵 Spotify (music control)', value: 'spotify' },
+            { name: '📅 Google (Calendar, Gmail, Tasks)', value: 'google' },
+            { name: '✨ Both Spotify and Google', value: 'both' },
+            { name: '⏭️  Skip for now (you can set up later)', value: 'skip' }
+          ]
         }
-        if (optionalAnswers.googleClientId) {
-          credentials.googleClientId = optionalAnswers.googleClientId.trim();
-          credentials.googleClientSecret = optionalAnswers.googleClientSecret?.trim();
-        }
+      ]);
+
+      // Setup Spotify if chosen
+      if (setupChoice.choice === 'spotify' || setupChoice.choice === 'both') {
+        await this.setupSpotify(credentials);
       }
 
+      // Setup Google if chosen
+      if (setupChoice.choice === 'google' || setupChoice.choice === 'both') {
+        await this.setupGoogle(credentials);
+      }
+
+      // Save credentials
       await this.credentialStorage.saveCredentials(credentials);
 
       // Load credentials into process.env
       const envVars = await this.credentialStorage.toEnvFormat();
       Object.assign(process.env, envVars);
 
-      console.log(chalk.green('\n✅ Credentials saved securely!'));
-      console.log(chalk.gray('Stored in: ~/.jarvis/credentials.json (encrypted)\n'));
+      console.log(chalk.green('\n✅ Setup complete! Your credentials are saved securely.'));
+      console.log(chalk.gray('Location: ~/.jarvis/credentials.json (encrypted)\n'));
+
+      if (setupChoice.choice === 'skip') {
+        console.log(chalk.yellow('💡 You can set up integrations later with:'));
+        console.log(chalk.white('   • node dist/index.js auth spotify'));
+        console.log(chalk.white('   • node dist/index.js auth google\n'));
+      }
     } else {
       // Load existing credentials into process.env
       const envVars = await this.credentialStorage.toEnvFormat();
       Object.assign(process.env, envVars);
+    }
+  }
+
+  private async setupSpotify(credentials: any): Promise<void> {
+    console.log(chalk.cyan('\n🎵 Spotify Setup'));
+    console.log(chalk.gray('Get credentials from: https://developer.spotify.com/dashboard\n'));
+
+    const spotifyAnswers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'clientId',
+        message: 'Spotify Client ID:',
+        validate: (input: string) => input.trim().length > 0 || 'Client ID is required'
+      },
+      {
+        type: 'input',
+        name: 'clientSecret',
+        message: 'Spotify Client Secret:',
+        validate: (input: string) => input.trim().length > 0 || 'Client Secret is required'
+      }
+    ]);
+
+    credentials.spotifyClientId = spotifyAnswers.clientId.trim();
+    credentials.spotifyClientSecret = spotifyAnswers.clientSecret.trim();
+
+    // Authenticate with Spotify
+    console.log(chalk.cyan('\n🔐 Authenticating with Spotify...'));
+    
+    try {
+      const config: OAuthConfig = {
+        clientId: credentials.spotifyClientId,
+        clientSecret: credentials.spotifyClientSecret,
+        redirectUri: 'http://127.0.0.1:8888/callback',
+        scopes: [
+          'user-read-playback-state',
+          'user-modify-playback-state',
+          'user-read-currently-playing',
+          'streaming',
+          'playlist-read-private',
+          'playlist-read-collaborative'
+        ]
+      };
+
+      const spotifyAuth = new SpotifyOAuth(config, this.logger);
+      const tokenStorage = new TokenStorage(this.logger);
+      const tokens = await spotifyAuth.authenticate();
+      await tokenStorage.saveTokens('spotify', tokens);
+
+      console.log(chalk.green('✅ Spotify authenticated successfully!'));
+    } catch (error) {
+      console.log(chalk.red('❌ Spotify authentication failed'));
+      this.logger.error('Spotify auth error:', error);
+    }
+  }
+
+  private async setupGoogle(credentials: any): Promise<void> {
+    console.log(chalk.cyan('\n📅 Google Services Setup'));
+    console.log(chalk.gray('Get credentials from: https://console.cloud.google.com\n'));
+
+    const googleAnswers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'clientId',
+        message: 'Google Client ID:',
+        validate: (input: string) => input.trim().length > 0 || 'Client ID is required'
+      },
+      {
+        type: 'input',
+        name: 'clientSecret',
+        message: 'Google Client Secret:',
+        validate: (input: string) => input.trim().length > 0 || 'Client Secret is required'
+      }
+    ]);
+
+    credentials.googleClientId = googleAnswers.clientId.trim();
+    credentials.googleClientSecret = googleAnswers.clientSecret.trim();
+
+    // Authenticate with Google
+    console.log(chalk.cyan('\n🔐 Authenticating with Google...'));
+    console.log(chalk.gray('This will enable Calendar, Gmail, and Tasks access.\n'));
+
+    try {
+      const config: OAuthConfig = {
+        clientId: credentials.googleClientId,
+        clientSecret: credentials.googleClientSecret,
+        redirectUri: 'http://127.0.0.1:8888/callback',
+        scopes: [
+          'https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/calendar.events',
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send',
+          'https://www.googleapis.com/auth/gmail.modify',
+          'https://www.googleapis.com/auth/tasks'
+        ]
+      };
+
+      const googleAuth = new GoogleOAuth(config, this.logger);
+      const tokenStorage = new TokenStorage(this.logger);
+      const tokens = await googleAuth.authenticate();
+      await tokenStorage.saveTokens('google', tokens);
+
+      console.log(chalk.green('✅ Google authenticated successfully!'));
+      console.log(chalk.gray('   • Calendar access enabled'));
+      console.log(chalk.gray('   • Gmail access enabled'));
+      console.log(chalk.gray('   • Tasks access enabled'));
+    } catch (error) {
+      console.log(chalk.red('❌ Google authentication failed'));
+      this.logger.error('Google auth error:', error);
     }
   }
 
