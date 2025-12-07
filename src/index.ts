@@ -3,11 +3,13 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
+import inquirer from 'inquirer';
 import { JarvisCLI } from './cli/interface';
 import { Logger } from './utils/logger';
 import { SpotifyOAuth } from './auth/spotify';
 import { GoogleOAuth } from './auth/google';
 import { TokenStorage } from './config/tokenStorage';
+import { CredentialStorage } from './config/credentialStorage';
 import { OAuthConfig } from './auth/oauth';
 
 // Load environment variables
@@ -165,6 +167,116 @@ async function main() {
           }
         } catch (error) {
           logger.error('Logout failed:', error);
+          process.exit(1);
+        }
+      });
+
+    // Credentials management
+    const configCommand = program
+      .command('config')
+      .description('Manage API credentials');
+
+    configCommand
+      .command('setup')
+      .description('Setup or update API credentials interactively')
+      .action(async () => {
+        try {
+          const credStorage = new CredentialStorage(logger);
+          console.log(chalk.cyan('🔐 API Credentials Setup\n'));
+
+          const answers = await inquirer.prompt([
+            {
+              type: 'input',
+              name: 'geminiApiKey',
+              message: 'Gemini API Key:',
+              default: await credStorage.getCredential('geminiApiKey') || ''
+            },
+            {
+              type: 'input',
+              name: 'spotifyClientId',
+              message: 'Spotify Client ID (optional):',
+              default: await credStorage.getCredential('spotifyClientId') || ''
+            },
+            {
+              type: 'input',
+              name: 'spotifyClientSecret',
+              message: 'Spotify Client Secret (optional):',
+              default: await credStorage.getCredential('spotifyClientSecret') || ''
+            },
+            {
+              type: 'input',
+              name: 'googleClientId',
+              message: 'Google Client ID (optional):',
+              default: await credStorage.getCredential('googleClientId') || ''
+            },
+            {
+              type: 'input',
+              name: 'googleClientSecret',
+              message: 'Google Client Secret (optional):',
+              default: await credStorage.getCredential('googleClientSecret') || ''
+            }
+          ]);
+
+          const credentials: any = {};
+          if (answers.geminiApiKey) credentials.geminiApiKey = answers.geminiApiKey.trim();
+          if (answers.spotifyClientId) credentials.spotifyClientId = answers.spotifyClientId.trim();
+          if (answers.spotifyClientSecret) credentials.spotifyClientSecret = answers.spotifyClientSecret.trim();
+          if (answers.googleClientId) credentials.googleClientId = answers.googleClientId.trim();
+          if (answers.googleClientSecret) credentials.googleClientSecret = answers.googleClientSecret.trim();
+
+          await credStorage.saveCredentials(credentials);
+          console.log(chalk.green('\n✅ Credentials saved securely!'));
+          console.log(chalk.gray('Stored in: ~/.jarvis/credentials.json (encrypted)\n'));
+        } catch (error) {
+          logger.error('Config setup failed:', error);
+          process.exit(1);
+        }
+      });
+
+    configCommand
+      .command('show')
+      .description('Show current credential status (masked)')
+      .action(async () => {
+        try {
+          const credStorage = new CredentialStorage(logger);
+          const creds = await credStorage.loadCredentials();
+
+          console.log(chalk.cyan.bold('\n🔐 Credential Status:\n'));
+          console.log(chalk.white('Gemini API Key:'), creds.geminiApiKey ? chalk.green('✓ Configured') : chalk.red('✗ Not set'));
+          console.log(chalk.white('Spotify Client ID:'), creds.spotifyClientId ? chalk.green('✓ Configured') : chalk.gray('○ Optional'));
+          console.log(chalk.white('Spotify Client Secret:'), creds.spotifyClientSecret ? chalk.green('✓ Configured') : chalk.gray('○ Optional'));
+          console.log(chalk.white('Google Client ID:'), creds.googleClientId ? chalk.green('✓ Configured') : chalk.gray('○ Optional'));
+          console.log(chalk.white('Google Client Secret:'), creds.googleClientSecret ? chalk.green('✓ Configured') : chalk.gray('○ Optional'));
+          console.log();
+        } catch (error) {
+          logger.error('Failed to show config:', error);
+          process.exit(1);
+        }
+      });
+
+    configCommand
+      .command('reset')
+      .description('Delete all stored credentials')
+      .action(async () => {
+        try {
+          const { confirm } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'confirm',
+              message: 'Are you sure you want to delete all credentials?',
+              default: false
+            }
+          ]);
+
+          if (confirm) {
+            const credStorage = new CredentialStorage(logger);
+            credStorage.deleteCredentials();
+            console.log(chalk.green('✅ All credentials deleted'));
+          } else {
+            console.log(chalk.yellow('Cancelled'));
+          }
+        } catch (error) {
+          logger.error('Reset failed:', error);
           process.exit(1);
         }
       });

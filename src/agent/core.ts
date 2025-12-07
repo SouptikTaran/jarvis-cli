@@ -1,7 +1,6 @@
 import { GeminiClient } from './gemini';
 import { ToolRegistry } from './tools/registry';
 import { ReadFileTool, WriteFileTool, ListDirectoryTool, GetCurrentTimeTool } from './tools/system';
-import { AddTaskTool, ListTasksTool, CompleteTaskTool, DeleteTaskTool } from './tools/tasks';
 import {
   AddGoogleTaskTool,
   ListGoogleTasksTool,
@@ -79,13 +78,7 @@ export class JarvisAgent {
     this.toolRegistry.registerTool(new ListDirectoryTool(this.logger));
     this.toolRegistry.registerTool(new GetCurrentTimeTool(this.logger));
     
-    // Register local task management tools (deprecated - use Google Tasks)
-    this.toolRegistry.registerTool(new AddTaskTool(this.logger));
-    this.toolRegistry.registerTool(new ListTasksTool(this.logger));
-    this.toolRegistry.registerTool(new CompleteTaskTool(this.logger));
-    this.toolRegistry.registerTool(new DeleteTaskTool(this.logger));
-    
-    // Register Google Tasks tools
+    // Register Google Tasks tools (preferred for task management)
     this.toolRegistry.registerTool(new AddGoogleTaskTool(this.logger));
     this.toolRegistry.registerTool(new ListGoogleTasksTool(this.logger));
     this.toolRegistry.registerTool(new CompleteGoogleTaskTool(this.logger));

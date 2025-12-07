@@ -8,14 +8,17 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 - ✅ Interactive terminal interface with Inquirer
 - ✅ **Conversation Memory**: Multi-turn conversations with context
 - ✅ Natural language input processing via Gemini AI
-- ✅ Function calling system with tool registry (33 tools total)
+- ✅ Function calling system with tool registry (29 tools total)
+- ✅ **Secure Credential Storage**: Encrypted API key management
+  - First-run interactive setup for Gemini API key
+  - Optional Spotify and Google credentials
+  - AES-256-GCM encrypted storage in ~/.jarvis/
 - ✅ File operations (read, write, list files)
 - ✅ **Google Tasks Integration**: Sync tasks across all devices
   - Add, list, complete, delete tasks
   - Priorities (low, medium, high) with emoji indicators
   - Due dates with overdue warnings
   - Syncs with Google Tasks mobile & web apps
-- ✅ **Local Task Management**: Offline task storage (deprecated)
 - ✅ **Spotify Integration**: 8 playback control tools
   - Play, pause, next/previous track
   - Get current track info
@@ -64,8 +67,35 @@ npx jarvis
 
 ## 🎮 Usage
 
-### Environment Setup
-Create a `.env` file with your API credentials:
+### First Run Setup
+On your first run, JARVIS will automatically prompt you to enter your API credentials:
+
+```bash
+npm start
+```
+
+You'll be asked to provide:
+- **Gemini API Key** (required) - Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
+- **Spotify credentials** (optional) - Get from [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+- **Google credentials** (optional) - Get from [Google Cloud Console](https://console.cloud.google.com)
+
+All credentials are **encrypted and stored securely** in `~/.jarvis/credentials.json`.
+
+### Manual Credential Management
+
+```bash
+# Interactive setup/update credentials
+node dist/index.js config setup
+
+# Show credential status (masked)
+node dist/index.js config show
+
+# Reset all credentials
+node dist/index.js config reset
+```
+
+### Alternative: Environment Variables
+You can still use `.env` file if you prefer:
 
 ```env
 # Required: Gemini AI
@@ -75,19 +105,26 @@ GEMINI_API_KEY=your_gemini_api_key
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
-# Optional: Google Calendar Integration  
+# Optional: Google Services
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
-### Authentication
+### OAuth Authentication
 
 ```bash
 # Authenticate with Spotify
-jarvis auth spotify
+node dist/index.js auth spotify
 
-# Authenticate with Google Calendar
-jarvis auth google
+# Authenticate with Google (Calendar, Gmail, Tasks)
+node dist/index.js auth google
+
+# Check authentication status
+node dist/index.js auth status
+
+# Logout from services
+node dist/index.js auth logout all
+```
 
 # Check authentication status
 jarvis auth status

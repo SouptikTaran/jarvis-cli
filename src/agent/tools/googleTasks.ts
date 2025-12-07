@@ -157,7 +157,7 @@ abstract class GoogleTasksBaseTool extends BaseTool {
 export class AddGoogleTaskTool extends GoogleTasksBaseTool {
   definition: ToolDefinition = {
     name: 'add_google_task',
-    description: 'Add a new task to Google Tasks. The task will be synced across all your Google devices.',
+    description: 'Add a new task to Google Tasks. ALWAYS use this tool when user wants to: "add task", "create task", "remember to", "todo", "add todo". Syncs across all devices.',
     category: 'tasks',
     parameters: [
       {
@@ -249,7 +249,7 @@ export class AddGoogleTaskTool extends GoogleTasksBaseTool {
 export class ListGoogleTasksTool extends GoogleTasksBaseTool {
   definition: ToolDefinition = {
     name: 'list_google_tasks',
-    description: 'List tasks from Google Tasks. Shows all your tasks synced across devices.',
+    description: 'List tasks from Google Tasks. ALWAYS use this tool when user wants to: "show tasks", "list tasks", "my tasks", "what tasks", "todos". Shows synced tasks from all devices.',
     category: 'tasks',
     parameters: [
       {
@@ -364,7 +364,7 @@ export class ListGoogleTasksTool extends GoogleTasksBaseTool {
 export class CompleteGoogleTaskTool extends GoogleTasksBaseTool {
   definition: ToolDefinition = {
     name: 'complete_google_task',
-    description: 'Mark a task as completed in Google Tasks. Specify task by number from the list or by title.',
+    description: 'Mark a task as completed in Google Tasks. ALWAYS use this tool when user wants to: "complete task", "done task", "finish task", "mark done". Specify task by number or title.',
     category: 'tasks',
     parameters: [
       {
@@ -442,7 +442,7 @@ export class CompleteGoogleTaskTool extends GoogleTasksBaseTool {
 export class DeleteGoogleTaskTool extends GoogleTasksBaseTool {
   definition: ToolDefinition = {
     name: 'delete_google_task',
-    description: 'Delete a task from Google Tasks. Specify task by number from the list or by title.',
+    description: 'Delete a task from Google Tasks. ALWAYS use this tool when user wants to: "delete task", "remove task". Specify task by number or title.',
     category: 'tasks',
     parameters: [
       {

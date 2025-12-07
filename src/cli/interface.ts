@@ -4,6 +4,7 @@ import boxen from 'boxen';
 import ora from 'ora';
 import { Logger } from '../utils/logger';
 import { JarvisAgent } from '../agent/core';
+import { CredentialStorage } from '../config/credentialStorage';
 
 export interface CLIOptions {
   verbose?: boolean;
@@ -14,14 +15,19 @@ export class JarvisCLI {
   private logger: Logger;
   private jarvisAgent: JarvisAgent | null = null;
   private isRunning: boolean = false;
+  private credentialStorage: CredentialStorage;
 
   constructor(private options: CLIOptions = {}) {
     this.logger = new Logger(options);
+    this.credentialStorage = new CredentialStorage(this.logger);
   }
 
   async start(): Promise<void> {
     try {
       this.displayWelcome();
+      
+      // Check for credentials on first run
+      await this.checkAndSetupCredentials();
       
       // Initialize JARVIS Agent
       await this.initializeAgent();
@@ -34,6 +40,90 @@ export class JarvisCLI {
       }
     } catch (error) {
       this.logger.error('CLI Error:', error);
+    }
+  }
+
+  private async checkAndSetupCredentials(): Promise<void> {
+    // Check if Gemini API key exists
+    const hasGemini = await this.credentialStorage.hasCredential('geminiApiKey');
+    
+    if (!hasGemini) {
+      console.log(chalk.yellow('\n🔐 First-time setup detected!'));
+      console.log(chalk.white('Let\'s configure your API credentials.\n'));
+
+      const answers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'geminiApiKey',
+          message: 'Enter your Gemini API Key (required):',
+          validate: (input: string) => {
+            if (!input || input.trim().length === 0) {
+              return 'Gemini API key is required. Get one from: https://makersuite.google.com/app/apikey';
+            }
+            return true;
+          }
+        },
+        {
+          type: 'confirm',
+          name: 'setupOptional',
+          message: 'Would you like to setup optional services (Spotify, Google Calendar/Tasks)?',
+          default: false
+        }
+      ]);
+
+      const credentials: any = {
+        geminiApiKey: answers.geminiApiKey.trim()
+      };
+
+      if (answers.setupOptional) {
+        const optionalAnswers = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'spotifyClientId',
+            message: 'Spotify Client ID (press Enter to skip):',
+          },
+          {
+            type: 'input',
+            name: 'spotifyClientSecret',
+            message: 'Spotify Client Secret (press Enter to skip):',
+            when: (answers: any) => !!answers.spotifyClientId
+          },
+          {
+            type: 'input',
+            name: 'googleClientId',
+            message: 'Google Client ID (press Enter to skip):',
+          },
+          {
+            type: 'input',
+            name: 'googleClientSecret',
+            message: 'Google Client Secret (press Enter to skip):',
+            when: (answers: any) => !!answers.googleClientId
+          }
+        ]);
+
+        // Add optional credentials if provided
+        if (optionalAnswers.spotifyClientId) {
+          credentials.spotifyClientId = optionalAnswers.spotifyClientId.trim();
+          credentials.spotifyClientSecret = optionalAnswers.spotifyClientSecret?.trim();
+        }
+        if (optionalAnswers.googleClientId) {
+          credentials.googleClientId = optionalAnswers.googleClientId.trim();
+          credentials.googleClientSecret = optionalAnswers.googleClientSecret?.trim();
+        }
+      }
+
+      await this.credentialStorage.saveCredentials(credentials);
+
+      // Load credentials into process.env
+      const envVars = await this.credentialStorage.toEnvFormat();
+      Object.assign(process.env, envVars);
+
+      console.log(chalk.green('\n✅ Credentials saved securely!'));
+      console.log(chalk.gray('Stored in: ~/.jarvis/credentials.json (encrypted)\n'));
+    } else {
+      // Load existing credentials into process.env
+      const envVars = await this.credentialStorage.toEnvFormat();
+      Object.assign(process.env, envVars);
     }
   }
 
