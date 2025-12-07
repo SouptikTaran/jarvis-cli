@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import inquirer from 'inquirer';
 import { JarvisCLI } from './cli/interface';
 import { Logger } from './utils/logger';
+import { ErrorHandler } from './utils/errorHandler';
 import { displayHelp, displayStatus, displayTutorial } from './utils/help';
 import { SpotifyOAuth } from './auth/spotify';
 import { GoogleOAuth } from './auth/google';
@@ -106,8 +107,8 @@ async function main() {
           console.log(chalk.green('✅ Successfully authenticated with Spotify!'));
           console.log(chalk.gray('Tokens have been securely stored.'));
         } catch (error) {
+          ErrorHandler.handleOAuthError('Spotify');
           logger.error('Spotify authentication failed:', error);
-          console.log(chalk.red('❌ Authentication failed'));
           process.exit(1);
         }
       });
@@ -122,7 +123,7 @@ async function main() {
           const config: OAuthConfig = {
             clientId: process.env.GOOGLE_CLIENT_ID || '',
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-            redirectUri: 'http://127.0.0.1:8888/callback',
+            redirectUri: 'http://localhost:8888/callback',
             scopes: [
               'https://www.googleapis.com/auth/calendar.readonly',
               'https://www.googleapis.com/auth/calendar.events',
@@ -148,8 +149,8 @@ async function main() {
           console.log(chalk.green('✅ Successfully authenticated with Google!'));
           console.log(chalk.gray('Tokens have been securely stored.'));
         } catch (error) {
+          ErrorHandler.handleOAuthError('Google');
           logger.error('Google authentication failed:', error);
-          console.log(chalk.red('❌ Authentication failed'));
           process.exit(1);
         }
       });

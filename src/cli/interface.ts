@@ -3,6 +3,7 @@ import inquirer from 'inquirer';
 import boxen from 'boxen';
 import ora from 'ora';
 import { Logger } from '../utils/logger';
+import { ErrorHandler } from '../utils/errorHandler';
 import { JarvisAgent } from '../agent/core';
 import { CredentialStorage } from '../config/credentialStorage';
 import { TokenStorage } from '../config/tokenStorage';
@@ -165,8 +166,7 @@ export class JarvisCLI {
 
       console.log(chalk.green('✅ Spotify authenticated successfully!'));
     } catch (error) {
-      console.log(chalk.red('❌ Spotify authentication failed'));
-      console.log(chalk.gray('You can try again later with: node dist/index.js auth spotify\n'));
+      ErrorHandler.handleOAuthError('Spotify');
       this.logger.error('Spotify auth error:', error);
     }
   }
@@ -207,8 +207,7 @@ export class JarvisCLI {
       console.log(chalk.gray('   • Gmail access enabled'));
       console.log(chalk.gray('   • Tasks access enabled'));
     } catch (error) {
-      console.log(chalk.red('❌ Google authentication failed'));
-      console.log(chalk.gray('You can try again later with: node dist/index.js auth google\n'));
+      ErrorHandler.handleOAuthError('Google');
       this.logger.error('Google auth error:', error);
     }
   }
@@ -225,22 +224,16 @@ export class JarvisCLI {
       if (isConnected) {
         const toolCount = this.jarvisAgent.getAvailableTools().length;
         spinner.succeed(chalk.green(`🧠 JARVIS AI online with ${toolCount} tools ready!`));
+        ErrorHandler.provideContextualHelp('chat');
       } else {
         spinner.warn(chalk.yellow('⚠️  AI brain connected but may have issues'));
+        ErrorHandler.handleAPIKeyError();
       }
       
     } catch (error) {
       spinner.fail(chalk.red('❌ Failed to connect to AI brain'));
-      
-      if (error instanceof Error && error.message.includes('GEMINI_API_KEY')) {
-        console.log(chalk.yellow('\n💡 Setup Instructions:'));
-        console.log(chalk.white('1. Get your API key from: https://makersuite.google.com/app/apikey'));
-        console.log(chalk.white('2. Copy .env.example to .env'));
-        console.log(chalk.white('3. Add your GEMINI_API_KEY to the .env file'));
-        console.log(chalk.gray('\nJARVIS will run in basic mode without AI responses.\n'));
-      }
-      
-      this.logger.warning('Running in basic mode without AI capabilities');
+      ErrorHandler.handleAPIKeyError();
+      this.logger.error('Agent initialization error:', error);
     }
   }
 
@@ -347,12 +340,21 @@ export class JarvisCLI {
       
       console.log('\n'); // Add newline after response
       
-    } catch (error) {
+    } catch (error: any) {
       spinner.fail(chalk.red('AI processing failed'));
-      this.logger.error('AI Error:', error);
       
-      // Fallback to basic response
-      await this.processWithFallback(input);
+      // Handle specific errors with helpful messages
+      if (error?.message?.includes('API key')) {
+        ErrorHandler.handleAPIKeyError();
+      } else if (error?.message?.includes('quota') || error?.message?.includes('limit')) {
+        ErrorHandler.handleRateLimitError();
+      } else if (error?.message?.includes('network') || error?.message?.includes('ENOTFOUND')) {
+        ErrorHandler.handleNetworkError();
+      } else {
+        ErrorHandler.handleGenericError(error);
+      }
+      
+      this.logger.error('AI Error:', error);
     }
   }
 
