@@ -6,26 +6,36 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 
 ### 🎯 Implemented
 - ✅ Interactive terminal interface with Inquirer
+- ✅ **Conversation Memory**: Multi-turn conversations with context
 - ✅ Natural language input processing via Gemini AI
-- ✅ Function calling system with tool registry
+- ✅ Function calling system with tool registry (28 tools total)
 - ✅ File operations (read, write, list files)
-- ✅ OAuth infrastructure for Spotify & Google Calendar
-- ✅ Secure token storage with AES-256-GCM encryption
+- ✅ **Task Management**: Add, list, complete, delete tasks
 - ✅ **Spotify Integration**: 8 playback control tools
   - Play, pause, next/previous track
   - Get current track info
-  - Search music
-  - Set volume
-  - Play specific tracks
+  - Search music, set volume
+- ✅ **Google Calendar**: 4 calendar management tools
+  - List events, get today's schedule
+  - Create events with natural date parsing
+  - Get next meeting
+- ✅ **Gmail Integration**: 4 email tools
+  - Get unread count, list emails
+  - Send emails, search inbox
+- ✅ **GitHub Automation**: 4 git tools
+  - Check status, commit changes
+  - Push to remote, smart commit messages
+- ✅ OAuth infrastructure with secure token storage
+- ✅ AES-256-GCM encrypted token management
 - ✅ Graceful shutdown handling
 - ✅ Structured logging system
 
 ### 🚀 Coming Soon
-- 📅 **Google Calendar Tools**: Schedule meetings, check agenda
-- 🎵 **Extended Spotify**: Playlists, shuffle, repeat modes
-- 💬 **Conversation Memory**: Multi-turn context
+- 🎙️ **Voice Mode**: Speech-to-text and text-to-speech
+- 🔍 **Web Search**: Real-time information from the web
+- 🎵 **Extended Spotify**: Playlists, recommendations
 - 🎨 **Better UX**: Command history, autocomplete
-- 🎙️ **Voice Mode**: Optional voice input/output
+- 📊 **Analytics**: Track productivity and usage
 
 ## 🛠️ Installation
 
@@ -94,10 +104,34 @@ jarvis --verbose
 ```
 
 Once in interactive mode, use natural language:
+
+**Spotify:**
 - "What song is playing?"
 - "Pause the music"
 - "Search for Bohemian Rhapsody"
 - "Set volume to 50"
+
+**Calendar:**
+- "What's on my calendar today?"
+- "When is my next meeting?"
+- "Create a meeting tomorrow at 2pm called Team Sync"
+
+**Email:**
+- "How many unread emails do I have?"
+- "Show me my recent emails"
+- "Send an email to john@example.com about the project"
+
+**Tasks:**
+- "Add a task to finish the report"
+- "Show my tasks"
+- "Complete task 1"
+
+**Git:**
+- "Commit the current code"
+- "Push the changes"
+- "What's the git status?"
+
+**Files:**
 - "List files in this directory"
 - "Read the package.json file"
 - "What time is it?"
@@ -145,16 +179,21 @@ src/
 │   └── interface.ts      # Terminal UI with Inquirer
 ├── agent/
 │   ├── core.ts           # Main agent coordinator
-│   ├── gemini.ts         # Gemini AI client
+│   ├── gemini.ts         # Gemini AI client with chat
+│   ├── memory.ts         # Conversation memory management
 │   └── tools/
 │       ├── base.ts       # Tool abstraction
 │       ├── registry.ts   # Tool registry system
-│       ├── system.ts     # File & system tools
-│       └── spotify.ts    # Spotify playback tools
+│       ├── system.ts     # File & system tools (4)
+│       ├── tasks.ts      # Task management tools (4)
+│       ├── spotify.ts    # Spotify playback tools (8)
+│       ├── calendar.ts   # Google Calendar tools (4)
+│       ├── email.ts      # Gmail tools (4)
+│       └── git.ts        # GitHub automation tools (4)
 ├── auth/
 │   ├── oauth.ts          # OAuth base provider
 │   ├── spotify.ts        # Spotify OAuth
-│   └── google.ts         # Google OAuth
+│   └── google.ts         # Google OAuth (Calendar + Gmail)
 ├── config/
 │   ├── encryption.ts     # AES-256-GCM encryption
 │   └── tokenStorage.ts   # Secure token management
@@ -169,10 +208,14 @@ src/
 - [x] **Sprint 1.2**: Gemini AI integration + Tool calling
 - [x] **Sprint 1.3**: Function calling fixes
 
-### Phase 2: Integrations ⚡ IN PROGRESS
-- [x] **Sprint 2.1**: OAuth infrastructure + Spotify tools ← *Current*
-- [ ] **Sprint 2.2**: Google Calendar tools
-- [ ] **Sprint 2.3**: Extended Spotify features
+### Phase 2: Integrations ✅ COMPLETE
+- [x] **Sprint 2.1**: OAuth infrastructure + Spotify tools
+- [x] **Sprint 2.2**: Conversation memory + Task management + Email + Git automation ← *Current*
+
+### Phase 3: Enhancement 🚀 NEXT
+- [ ] **Sprint 3.1**: Voice input/output
+- [ ] **Sprint 3.2**: Web search integration
+- [ ] **Sprint 3.3**: Advanced UX improvements
 - [ ] **Sprint 2.2**: Spotify integration
 - [ ] **Sprint 2.3**: Google Calendar integration
 

@@ -97,7 +97,10 @@ async function main() {
             redirectUri: 'http://127.0.0.1:8888/callback',
             scopes: [
               'https://www.googleapis.com/auth/calendar.readonly',
-              'https://www.googleapis.com/auth/calendar.events'
+              'https://www.googleapis.com/auth/calendar.events',
+              'https://www.googleapis.com/auth/gmail.readonly',
+              'https://www.googleapis.com/auth/gmail.send',
+              'https://www.googleapis.com/auth/gmail.modify'
             ]
           };
 

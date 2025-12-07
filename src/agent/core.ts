@@ -2,6 +2,18 @@ import { GeminiClient } from './gemini';
 import { ToolRegistry } from './tools/registry';
 import { ReadFileTool, WriteFileTool, ListDirectoryTool, GetCurrentTimeTool } from './tools/system';
 import { AddTaskTool, ListTasksTool, CompleteTaskTool, DeleteTaskTool } from './tools/tasks';
+import {
+  GetUnreadCountTool,
+  ListEmailsTool,
+  SendEmailTool,
+  SearchEmailsTool
+} from './tools/email';
+import {
+  GitStatusTool,
+  GitCommitTool,
+  GitPushTool,
+  GitCommitAndPushTool
+} from './tools/git';
 import { 
   CurrentTrackTool,
   PlayMusicTool,
@@ -66,11 +78,20 @@ export class JarvisAgent {
     this.toolRegistry.registerTool(new CompleteTaskTool(this.logger));
     this.toolRegistry.registerTool(new DeleteTaskTool(this.logger));
     
+    // Register Git tools
+    this.toolRegistry.registerTool(new GitStatusTool(this.logger));
+    this.toolRegistry.registerTool(new GitCommitTool(this.logger));
+    this.toolRegistry.registerTool(new GitPushTool(this.logger));
+    this.toolRegistry.registerTool(new GitCommitAndPushTool(this.logger));
+    
     // Register Spotify tools
     this.initializeSpotifyTools();
     
     // Register Google Calendar tools
     this.initializeCalendarTools();
+    
+    // Register Gmail tools
+    this.initializeGmailTools();
     
     this.logger.verbose(`Initialized ${this.toolRegistry.getToolCount()} tools`);
   }
@@ -140,6 +161,39 @@ export class JarvisAgent {
       }
     } catch (error) {
       this.logger.error('Failed to initialize Calendar tools:', error);
+    }
+  }
+
+  private initializeGmailTools(): void {
+    try {
+      const config: OAuthConfig = {
+        clientId: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+        redirectUri: 'http://127.0.0.1:8888/callback',
+        scopes: [
+          'https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/calendar.events',
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send',
+          'https://www.googleapis.com/auth/gmail.modify'
+        ]
+      };
+
+      // Only register Gmail tools if credentials are present
+      if (config.clientId && config.clientSecret) {
+        const googleAuth = new GoogleOAuth(config, this.logger);
+
+        this.toolRegistry.registerTool(new GetUnreadCountTool(this.tokenStorage, googleAuth, this.logger));
+        this.toolRegistry.registerTool(new ListEmailsTool(this.tokenStorage, googleAuth, this.logger));
+        this.toolRegistry.registerTool(new SendEmailTool(this.tokenStorage, googleAuth, this.logger));
+        this.toolRegistry.registerTool(new SearchEmailsTool(this.tokenStorage, googleAuth, this.logger));
+
+        this.logger.debug('Registered 4 Gmail tools');
+      } else {
+        this.logger.debug('Google credentials not found, skipping Gmail tools');
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize Gmail tools:', error);
     }
   }
 
