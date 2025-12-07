@@ -8,9 +8,14 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 - ✅ Interactive terminal interface with Inquirer
 - ✅ **Conversation Memory**: Multi-turn conversations with context
 - ✅ Natural language input processing via Gemini AI
-- ✅ Function calling system with tool registry (29 tools total)
+- ✅ Function calling system with tool registry (33 tools total)
 - ✅ File operations (read, write, list files)
-- ✅ **Task Management**: Add, list, complete, delete tasks
+- ✅ **Google Tasks Integration**: Sync tasks across all devices
+  - Add, list, complete, delete tasks
+  - Priorities (low, medium, high) with emoji indicators
+  - Due dates with overdue warnings
+  - Syncs with Google Tasks mobile & web apps
+- ✅ **Local Task Management**: Offline task storage (deprecated)
 - ✅ **Spotify Integration**: 8 playback control tools
   - Play, pause, next/previous track
   - Get current track info

@@ -101,7 +101,7 @@ abstract class TaskBaseTool extends BaseTool {
 export class AddTaskTool extends TaskBaseTool {
   definition: ToolDefinition = {
     name: 'add_task',
-    description: 'Add a new task or todo item to your task list. Use when user wants to create, add, or remember something to do.',
+    description: '[DEPRECATED] Use add_google_task instead. Local task storage - prefer Google Tasks for sync across devices.',
     category: 'system',
     parameters: [
       {
@@ -170,7 +170,7 @@ export class AddTaskTool extends TaskBaseTool {
 export class ListTasksTool extends TaskBaseTool {
   definition: ToolDefinition = {
     name: 'list_tasks',
-    description: 'List all tasks or filter by status. Use when user asks about their tasks, todos, or what they need to do.',
+    description: '[DEPRECATED] Use list_google_tasks instead. Local task storage - prefer Google Tasks for sync across devices.',
     category: 'system',
     parameters: [
       {
@@ -240,7 +240,7 @@ export class ListTasksTool extends TaskBaseTool {
 export class CompleteTaskTool extends TaskBaseTool {
   definition: ToolDefinition = {
     name: 'complete_task',
-    description: 'Mark a task as completed. Use task number from list or task title.',
+    description: '[DEPRECATED] Use complete_google_task instead. Local task storage - prefer Google Tasks for sync across devices.',
     category: 'system',
     parameters: [
       {
@@ -304,7 +304,7 @@ export class CompleteTaskTool extends TaskBaseTool {
 export class DeleteTaskTool extends TaskBaseTool {
   definition: ToolDefinition = {
     name: 'delete_task',
-    description: 'Delete a task permanently. Use task number or title.',
+    description: '[DEPRECATED] Use delete_google_task instead. Local task storage - prefer Google Tasks for sync across devices.',
     category: 'system',
     parameters: [
       {

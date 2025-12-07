@@ -10,7 +10,7 @@ export interface ToolDefinition {
   name: string;
   description: string;
   parameters: ToolParameter[];
-  category: 'system' | 'spotify' | 'calendar' | 'file' | 'web';
+  category: 'system' | 'spotify' | 'calendar' | 'file' | 'web' | 'tasks';
 }
 
 export interface ToolCall {
