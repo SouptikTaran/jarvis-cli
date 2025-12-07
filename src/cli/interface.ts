@@ -76,9 +76,12 @@ export class JarvisCLI {
         geminiApiKey: geminiAnswer.geminiApiKey.trim()
       };
 
+      // Save Gemini key first
+      await this.credentialStorage.saveCredentials(credentials);
+
       // Step 2: Optional Services
       console.log(chalk.cyan.bold('\n\nStep 2: Optional Integrations'));
-      console.log(chalk.gray('Set up Spotify and Google services for enhanced features.\n'));
+      console.log(chalk.gray('Authenticate with services for enhanced features.\n'));
 
       const setupChoice = await inquirer.prompt([
         {
@@ -89,33 +92,37 @@ export class JarvisCLI {
             { name: '🎵 Spotify (music control)', value: 'spotify' },
             { name: '📅 Google (Calendar, Gmail, Tasks)', value: 'google' },
             { name: '✨ Both Spotify and Google', value: 'both' },
-            { name: '⏭️  Skip for now (you can set up later)', value: 'skip' }
+            { name: '⏭️  Skip for now (you can authenticate later)', value: 'skip' }
           ]
         }
       ]);
 
       // Setup Spotify if chosen
       if (setupChoice.choice === 'spotify' || setupChoice.choice === 'both') {
-        await this.setupSpotify(credentials);
+        await this.authenticateSpotify();
+        // Wait for server to fully close before next authentication
+        if (setupChoice.choice === 'both') {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
 
       // Setup Google if chosen
       if (setupChoice.choice === 'google' || setupChoice.choice === 'both') {
-        await this.setupGoogle(credentials);
+        await this.authenticateGoogle();
       }
-
-      // Save credentials
-      await this.credentialStorage.saveCredentials(credentials);
 
       // Load credentials into process.env
       const envVars = await this.credentialStorage.toEnvFormat();
       Object.assign(process.env, envVars);
 
-      console.log(chalk.green('\n✅ Setup complete! Your credentials are saved securely.'));
-      console.log(chalk.gray('Location: ~/.jarvis/credentials.json (encrypted)\n'));
+      console.log(chalk.green('\n✅ Setup complete!'));
+      console.log(chalk.gray('Credentials: ~/.jarvis/credentials.json (encrypted)'));
+      if (setupChoice.choice !== 'skip') {
+        console.log(chalk.gray('OAuth Tokens: ~/.jarvis/tokens.json (encrypted)\n'));
+      }
 
       if (setupChoice.choice === 'skip') {
-        console.log(chalk.yellow('💡 You can set up integrations later with:'));
+        console.log(chalk.yellow('\n💡 You can authenticate later with:'));
         console.log(chalk.white('   • node dist/index.js auth spotify'));
         console.log(chalk.white('   • node dist/index.js auth google\n'));
       }
@@ -126,35 +133,14 @@ export class JarvisCLI {
     }
   }
 
-  private async setupSpotify(credentials: any): Promise<void> {
-    console.log(chalk.cyan('\n🎵 Spotify Setup'));
-    console.log(chalk.gray('Get credentials from: https://developer.spotify.com/dashboard\n'));
+  private async authenticateSpotify(): Promise<void> {
+    console.log(chalk.cyan('\n🎵 Spotify Authentication'));
+    console.log(chalk.gray('Opening browser for authorization...\n'));
 
-    const spotifyAnswers = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'clientId',
-        message: 'Spotify Client ID:',
-        validate: (input: string) => input.trim().length > 0 || 'Client ID is required'
-      },
-      {
-        type: 'input',
-        name: 'clientSecret',
-        message: 'Spotify Client Secret:',
-        validate: (input: string) => input.trim().length > 0 || 'Client Secret is required'
-      }
-    ]);
-
-    credentials.spotifyClientId = spotifyAnswers.clientId.trim();
-    credentials.spotifyClientSecret = spotifyAnswers.clientSecret.trim();
-
-    // Authenticate with Spotify
-    console.log(chalk.cyan('\n🔐 Authenticating with Spotify...'));
-    
     try {
       const config: OAuthConfig = {
-        clientId: credentials.spotifyClientId,
-        clientSecret: credentials.spotifyClientSecret,
+        clientId: process.env.SPOTIFY_CLIENT_ID || '',
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
         redirectUri: 'http://127.0.0.1:8888/callback',
         scopes: [
           'user-read-playback-state',
@@ -166,6 +152,12 @@ export class JarvisCLI {
         ]
       };
 
+      if (!config.clientId || !config.clientSecret) {
+        console.log(chalk.yellow('⚠️  Spotify credentials not found in .env file'));
+        console.log(chalk.gray('Add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to .env or authenticate later\n'));
+        return;
+      }
+
       const spotifyAuth = new SpotifyOAuth(config, this.logger);
       const tokenStorage = new TokenStorage(this.logger);
       const tokens = await spotifyAuth.authenticate();
@@ -174,40 +166,20 @@ export class JarvisCLI {
       console.log(chalk.green('✅ Spotify authenticated successfully!'));
     } catch (error) {
       console.log(chalk.red('❌ Spotify authentication failed'));
+      console.log(chalk.gray('You can try again later with: node dist/index.js auth spotify\n'));
       this.logger.error('Spotify auth error:', error);
     }
   }
 
-  private async setupGoogle(credentials: any): Promise<void> {
-    console.log(chalk.cyan('\n📅 Google Services Setup'));
-    console.log(chalk.gray('Get credentials from: https://console.cloud.google.com\n'));
-
-    const googleAnswers = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'clientId',
-        message: 'Google Client ID:',
-        validate: (input: string) => input.trim().length > 0 || 'Client ID is required'
-      },
-      {
-        type: 'input',
-        name: 'clientSecret',
-        message: 'Google Client Secret:',
-        validate: (input: string) => input.trim().length > 0 || 'Client Secret is required'
-      }
-    ]);
-
-    credentials.googleClientId = googleAnswers.clientId.trim();
-    credentials.googleClientSecret = googleAnswers.clientSecret.trim();
-
-    // Authenticate with Google
-    console.log(chalk.cyan('\n🔐 Authenticating with Google...'));
-    console.log(chalk.gray('This will enable Calendar, Gmail, and Tasks access.\n'));
+  private async authenticateGoogle(): Promise<void> {
+    console.log(chalk.cyan('\n📅 Google Services Authentication'));
+    console.log(chalk.gray('Opening browser for authorization...'));
+    console.log(chalk.gray('This enables: Calendar, Gmail, and Tasks\n'));
 
     try {
       const config: OAuthConfig = {
-        clientId: credentials.googleClientId,
-        clientSecret: credentials.googleClientSecret,
+        clientId: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
         redirectUri: 'http://127.0.0.1:8888/callback',
         scopes: [
           'https://www.googleapis.com/auth/calendar.readonly',
@@ -218,6 +190,12 @@ export class JarvisCLI {
           'https://www.googleapis.com/auth/tasks'
         ]
       };
+
+      if (!config.clientId || !config.clientSecret) {
+        console.log(chalk.yellow('⚠️  Google credentials not found in .env file'));
+        console.log(chalk.gray('Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env or authenticate later\n'));
+        return;
+      }
 
       const googleAuth = new GoogleOAuth(config, this.logger);
       const tokenStorage = new TokenStorage(this.logger);
@@ -230,6 +208,7 @@ export class JarvisCLI {
       console.log(chalk.gray('   • Tasks access enabled'));
     } catch (error) {
       console.log(chalk.red('❌ Google authentication failed'));
+      console.log(chalk.gray('You can try again later with: node dist/index.js auth google\n'));
       this.logger.error('Google auth error:', error);
     }
   }

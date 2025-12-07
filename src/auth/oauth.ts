@@ -36,20 +36,28 @@ export abstract class OAuthProvider {
         this.logger.info('OAuth server started on http://127.0.0.1:8888');
       });
 
+      // Timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        server.close();
+        reject(new Error('Authentication timeout - no response received'));
+      }, 120000); // 2 minutes
+
       // Callback endpoint
       app.get('/callback', async (req: Request, res: Response) => {
         const { code, error } = req.query;
 
+        clearTimeout(timeout);
+
         if (error) {
           res.send(`<h1>Authentication Failed</h1><p>Error: ${error}</p>`);
-          server.close();
+          this.closeServer(server);
           reject(new Error(`OAuth error: ${error}`));
           return;
         }
 
         if (!code || typeof code !== 'string') {
           res.send('<h1>Authentication Failed</h1><p>No authorization code received</p>');
-          server.close();
+          this.closeServer(server);
           reject(new Error('No authorization code received'));
           return;
         }
@@ -70,11 +78,12 @@ export abstract class OAuthProvider {
             </html>
           `);
 
-          server.close();
-          resolve(tokens);
+          this.closeServer(server);
+          // Small delay to ensure response is sent before resolving
+          setTimeout(() => resolve(tokens), 500);
         } catch (error) {
           res.send(`<h1>Authentication Failed</h1><p>Error: ${error}</p>`);
-          server.close();
+          this.closeServer(server);
           reject(error);
         }
       });
@@ -86,6 +95,14 @@ export abstract class OAuthProvider {
         this.logger.error('Failed to open browser:', err);
         this.logger.info(`Please manually open: ${authUrl}`);
       });
+    });
+  }
+
+  private closeServer(server: any): void {
+    server.close((err: any) => {
+      if (err) {
+        this.logger.error('Error closing OAuth server:', err);
+      }
     });
   }
 
