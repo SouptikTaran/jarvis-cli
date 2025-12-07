@@ -53,11 +53,16 @@ export class JarvisCLI {
     const hasGemini = await this.credentialStorage.hasCredential('geminiApiKey');
     
     if (!hasGemini) {
-      console.log(chalk.yellow('\n🎉 Welcome to JARVIS! Let\'s get you set up.\n'));
-
-      // Step 1: Gemini API Key (Required)
-      console.log(chalk.cyan.bold('Step 1: Gemini AI Setup (Required)'));
-      console.log(chalk.gray('Get your free API key from: https://makersuite.google.com/app/apikey\n'));
+      console.log('');
+      console.log(chalk.hex('#FFD700').bold('  ✨ Welcome to JARVIS! Let\'s get you set up.'));
+      console.log('');
+      console.log(chalk.hex('#00D9FF')('  ╔═══════════════════════════════════════════════════╗'));
+      console.log(chalk.hex('#00D9FF')('  ║ ') + chalk.hex('#FFFFFF').bold('Step 1: Gemini AI Setup') + chalk.hex('#FF6B6B')(' (Required)') + '             ' + chalk.hex('#00D9FF')('║'));
+      console.log(chalk.hex('#00D9FF')('  ╚═══════════════════════════════════════════════════╝'));
+      console.log('');
+      console.log(chalk.hex('#666666')('  Get your free API key from:'));
+      console.log(chalk.hex('#4285F4')('  → https://makersuite.google.com/app/apikey'));
+      console.log('');
 
       const geminiAnswer = await inquirer.prompt([
         {
@@ -81,8 +86,13 @@ export class JarvisCLI {
       await this.credentialStorage.saveCredentials(credentials);
 
       // Step 2: Optional Services
-      console.log(chalk.cyan.bold('\n\nStep 2: Optional Integrations'));
-      console.log(chalk.gray('Authenticate with services for enhanced features.\n'));
+      console.log('');
+      console.log(chalk.hex('#00D9FF')('  ╔═══════════════════════════════════════════════════╗'));
+      console.log(chalk.hex('#00D9FF')('  ║ ') + chalk.hex('#FFFFFF').bold('Step 2: Optional Integrations') + chalk.hex('#666666')(' (Recommended)') + '   ' + chalk.hex('#00D9FF')('║'));
+      console.log(chalk.hex('#00D9FF')('  ╚═══════════════════════════════════════════════════╝'));
+      console.log('');
+      console.log(chalk.hex('#666666')('  Authenticate with services for enhanced features'));
+      console.log('');
 
       const setupChoice = await inquirer.prompt([
         {
@@ -238,33 +248,46 @@ export class JarvisCLI {
   }
 
   private displayWelcome(): void {
-    const welcomeMessage = boxen(
-      chalk.cyan.bold('🤖 J.A.R.V.I.S') + chalk.white(' - Just A Rather Very Intelligent System') + '\n\n' +
-      chalk.white('🎯 Powered by Google Gemini AI') + '\n' +
-      chalk.white('🎵 Music control via Spotify ') + chalk.gray('(coming soon)') + '\n' +
-      chalk.white('📅 Calendar management ') + chalk.gray('(coming soon)') + '\n\n' +
-      chalk.green('Ready to assist with your requests!') + '\n' +
-      chalk.gray('Type naturally - exit with "quit" or Ctrl+C'),
-      {
-        padding: 1,
-        margin: 1,
-        borderStyle: 'round',
-        borderColor: 'cyan'
-      }
-    );
-
     console.clear();
-    console.log(welcomeMessage);
+    
+    // Modern gradient-style header with corrected JARVIS ASCII art
+    const header = [
+      '',
+      chalk.hex('#00D9FF').bold('     ╔═══════════════════════════════════════════════════════╗'),
+      chalk.hex('#00D9FF').bold('     ║  ') + chalk.hex('#00F5FF').bold('   ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗') + chalk.hex('#00D9FF').bold('          ║'),
+      chalk.hex('#00D9FF').bold('     ║  ') + chalk.hex('#33CCFF').bold('   ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝') + chalk.hex('#00D9FF').bold('          ║'),
+      chalk.hex('#00D9FF').bold('     ║  ') + chalk.hex('#66B3FF').bold('   ██║███████║██████╔╝██║   ██║██║███████╗') + chalk.hex('#00D9FF').bold('          ║'),
+      chalk.hex('#00D9FF').bold('     ║  ') + chalk.hex('#9999FF').bold('██ ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║') + chalk.hex('#00D9FF').bold('          ║'),
+      chalk.hex('#00D9FF').bold('     ║  ') + chalk.hex('#CC66FF').bold('╚█████║██║  ██║██║  ██║ ╚████╔╝ ██║███████║') + chalk.hex('#00D9FF').bold('          ║'),
+      chalk.hex('#00D9FF').bold('     ║  ') + chalk.hex('#FF66FF').bold(' ╚════╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝') + chalk.hex('#00D9FF').bold('          ║'),
+      chalk.hex('#00D9FF').bold('     ╚═══════════════════════════════════════════════════════╝'),
+      '',
+      chalk.hex('#FFFFFF').bold('               Just A Rather Very Intelligent System'),
+      chalk.hex('#666666')('                   Powered by ') + chalk.hex('#4285F4').bold('Google Gemini') + chalk.hex('#666666')(' 🧠'),
+      '',
+      chalk.hex('#00FF00')('          ✓ ') + chalk.hex('#AAAAAA')('29 Tools Ready') + chalk.hex('#444444')('  │  ') + chalk.hex('#00FF00')('✓ ') + chalk.hex('#AAAAAA')('AI Online') + chalk.hex('#444444')('  │  ') + chalk.hex('#00FF00')('✓ ') + chalk.hex('#AAAAAA')('Encrypted'),
+      '',
+      chalk.hex('#FFD700')('          💡 ') + chalk.hex('#FFFFFF').bold('Quick Start:'),
+      chalk.hex('#555555')('             • ') + chalk.hex('#00D9FF')('help') + chalk.hex('#999999')('     - View all commands'),
+      chalk.hex('#555555')('             • ') + chalk.hex('#00D9FF')('tutorial') + chalk.hex('#999999')('  - Interactive learning'),
+      chalk.hex('#555555')('             • ') + chalk.hex('#00D9FF')('status') + chalk.hex('#999999')('    - System health check'),
+      chalk.hex('#555555')('             • ') + chalk.hex('#00D9FF')('exit') + chalk.hex('#999999')('      - End session'),
+      '',
+      chalk.hex('#FF6B6B')('          ───────────────────────────────────────────────────'),
+      ''
+    ].join('\n');
+
+    console.log(header);
   }
 
   private async handleUserInput(): Promise<void> {
     try {
-      // Clean prompt without extra text
+      // Modern styled prompt
       const response = await inquirer.prompt([
         {
           type: 'input',
           name: 'command',
-          message: chalk.blue('❯'),
+          message: chalk.hex('#00D9FF').bold('│') + chalk.hex('#FFFFFF')(' You') + chalk.hex('#00D9FF').bold(' ❯'),
           prefix: '',
         }
       ]);
@@ -315,10 +338,11 @@ export class JarvisCLI {
   }
 
   private async processWithAI(input: string): Promise<void> {
-    // Show thinking indicator
+    // Show modern thinking indicator
     const spinner = ora({
-      text: chalk.gray('JARVIS is thinking...'),
-      spinner: 'dots'
+      text: chalk.hex('#00D9FF')('⚡ JARVIS is processing') + chalk.hex('#666666')('...'),
+      spinner: 'dots12',
+      color: 'cyan'
     }).start();
 
     try {
@@ -327,18 +351,29 @@ export class JarvisCLI {
       
       spinner.stop();
       
-      // Print response header
-      console.log(chalk.magenta.bold('\n🤖 JARVIS:'));
+      // Modern response header with gradient
+      console.log('');
+      console.log(chalk.hex('#00D9FF').bold('  │ ') + chalk.hex('#CC66FF').bold('JARVIS') + chalk.hex('#00D9FF').bold(' ❯'));
+      console.log(chalk.hex('#222222')('  ├───────────────────────────────────────────────────'));
+      console.log('');
       
       let fullResponse = '';
       
-      // Stream the response
+      // Stream the response with left padding
       for await (const chunk of responseStream) {
-        process.stdout.write(chalk.white(chunk));
+        const lines = chunk.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (i > 0) process.stdout.write('\n');
+          if (lines[i]) {
+            process.stdout.write(chalk.hex('#E0E0E0')('  │ ') + chalk.white(lines[i]));
+          }
+        }
         fullResponse += chunk;
       }
       
-      console.log('\n'); // Add newline after response
+      console.log('\n');
+      console.log(chalk.hex('#222222')('  └───────────────────────────────────────────────────'));
+      console.log('');
       
     } catch (error: any) {
       spinner.fail(chalk.red('AI processing failed'));
@@ -418,8 +453,22 @@ export class JarvisCLI {
   }
 
   private async handleExit(): Promise<void> {
-    console.log(chalk.magenta.bold('\n🤖 JARVIS:'), chalk.white('Powering down. Until next time! 👋\n'));
     this.isRunning = false;
+    
+    console.log('\n');
+    console.log(chalk.hex('#FF6B6B')('     ═══════════════════════════════════════════════════'));
+    console.log('');
+    console.log(chalk.hex('#FFD700').bold('               👋  Goodbye! Thanks for using JARVIS'));
+    console.log('');
+    console.log(chalk.hex('#00D9FF')('                  See you next time, ') + chalk.hex('#FFFFFF').bold('human') + chalk.hex('#00D9FF')('! ✨'));
+    console.log('');
+    console.log(chalk.hex('#666666')('               Systems shutting down gracefully...'));
+    console.log('');
+    console.log(chalk.hex('#FF6B6B')('     ═══════════════════════════════════════════════════'));
+    console.log('\n');
+    
+    // Brief pause for effect
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   stop(): void {
