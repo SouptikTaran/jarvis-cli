@@ -12,7 +12,8 @@ import {
   GitStatusTool,
   GitCommitTool,
   GitPushTool,
-  GitCommitAndPushTool
+  GitCommitAndPushTool,
+  GitLogTool
 } from './tools/git';
 import { 
   CurrentTrackTool,
@@ -83,6 +84,7 @@ export class JarvisAgent {
     this.toolRegistry.registerTool(new GitCommitTool(this.logger));
     this.toolRegistry.registerTool(new GitPushTool(this.logger));
     this.toolRegistry.registerTool(new GitCommitAndPushTool(this.logger));
+    this.toolRegistry.registerTool(new GitLogTool(this.logger));
     
     // Register Spotify tools
     this.initializeSpotifyTools();

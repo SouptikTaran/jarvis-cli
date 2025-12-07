@@ -417,3 +417,76 @@ export class GitCommitAndPushTool extends GitBaseTool {
     }
   }
 }
+
+/**
+ * Show git commit history
+ */
+export class GitLogTool extends GitBaseTool {
+  definition: ToolDefinition = {
+    name: 'git_log',
+    description: 'Show git commit history. Use this when user asks about: "last commit", "recent commits", "commit history", "what did I commit", "show commits"',
+    category: 'system',
+    parameters: [
+      {
+        name: 'limit',
+        type: 'number',
+        description: 'Number of commits to show (default: 5)',
+        required: false
+      }
+    ]
+  };
+
+  async execute(parameters: Record<string, any>): Promise<ToolResult> {
+    try {
+      // Check if in a git repository
+      try {
+        await this.executeGit('git rev-parse --git-dir');
+      } catch (error) {
+        return {
+          success: false,
+          error: 'Not in a git repository'
+        };
+      }
+
+      const limit = parameters.limit || 5;
+      
+      // Get commit log with formatted output
+      const log = await this.executeGit(
+        `git log -${limit} --pretty=format:"%h|%an|%ar|%s" --abbrev-commit`
+      );
+
+      if (!log) {
+        return {
+          success: true,
+          data: { commits: [] },
+          message: 'No commits found in this repository'
+        };
+      }
+
+      // Parse commits
+      const commits = log.split('\n').map(line => {
+        const [hash, author, date, message] = line.split('|');
+        return { hash, author, date, message };
+      });
+
+      // Format output
+      let output = `📜 Recent commits (last ${commits.length}):\n\n`;
+      commits.forEach((commit, index) => {
+        output += `${index + 1}. [${commit.hash}] ${commit.message}\n`;
+        output += `   👤 ${commit.author} • 🕐 ${commit.date}\n\n`;
+      });
+
+      return {
+        success: true,
+        data: { commits },
+        message: output.trim()
+      };
+    } catch (error) {
+      this.logger.error('Failed to get commit history:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get commit history'
+      };
+    }
+  }
+}

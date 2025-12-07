@@ -8,7 +8,7 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 - ✅ Interactive terminal interface with Inquirer
 - ✅ **Conversation Memory**: Multi-turn conversations with context
 - ✅ Natural language input processing via Gemini AI
-- ✅ Function calling system with tool registry (28 tools total)
+- ✅ Function calling system with tool registry (29 tools total)
 - ✅ File operations (read, write, list files)
 - ✅ **Task Management**: Add, list, complete, delete tasks
 - ✅ **Spotify Integration**: 8 playback control tools
@@ -22,9 +22,10 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 - ✅ **Gmail Integration**: 4 email tools
   - Get unread count, list emails
   - Send emails, search inbox
-- ✅ **GitHub Automation**: 4 git tools
-  - Check status, commit changes
-  - Push to remote, smart commit messages
+- ✅ **GitHub Automation**: 5 git tools
+  - Check status, view commit history
+  - Commit changes, push to remote
+  - Smart AI-generated commit messages
 - ✅ OAuth infrastructure with secure token storage
 - ✅ AES-256-GCM encrypted token management
 - ✅ Graceful shutdown handling
