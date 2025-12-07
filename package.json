@@ -12,7 +12,18 @@
     "start": "node dist/index.js",
     "jarvis": "npm run build && npm start",
     "test": "jest",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run build",
+    "postinstall": "npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [
     "ai",
@@ -21,8 +32,20 @@
     "gemini",
     "spotify",
     "calendar",
-    "terminal"
+    "terminal",
+    "jarvis",
+    "chatbot",
+    "ai-assistant",
+    "productivity"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SouptikTaran/jarvis-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SouptikTaran/jarvis-cli/issues"
+  },
+  "homepage": "https://github.com/SouptikTaran/jarvis-cli#readme",
   "author": "Souptik Taran",
   "license": "MIT",
   "dependencies": {

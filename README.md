@@ -1,6 +1,15 @@
 # 🤖 JARVIS CLI
 
-An intelligent terminal-based AI assistant powered by Google's Gemini, with Spotify and Google Calendar integrations.
+[![npm version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/SouptikTaran/jarvis-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue.svg)](https://www.typescriptlang.org/)
+
+An intelligent terminal-based AI assistant powered by Google's Gemini, with Spotify, Google Calendar, Gmail, Tasks, and GitHub integrations.
+
+> **Your personal AI assistant that lives in your terminal** - Control your music, manage calendars, handle emails, track tasks, automate Git workflows, and have natural conversations, all without leaving the command line.
+
+---
 
 ## ✨ Features
 
@@ -58,9 +67,23 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 
 ## 🛠️ Installation
 
+### Option 1: Install from GitHub (Recommended)
+
+```bash
+# Install globally from GitHub
+npm install -g git+https://github.com/SouptikTaran/jarvis-cli.git
+
+# Run JARVIS from anywhere
+jarvis start
+```
+
+The package will automatically build after installation.
+
+### Option 2: Install from Source
+
 ```bash
 # Clone the repository
-git clone https://github.com/souptik-taran/jarvis-cli.git
+git clone https://github.com/SouptikTaran/jarvis-cli.git
 cd jarvis-cli
 
 # Install dependencies
@@ -69,11 +92,20 @@ npm install
 # Build the project
 npm run build
 
+# Link globally (optional)
+npm link
+
 # Run JARVIS
-npm start
+jarvis start
 # or
-npx jarvis
+npm start
 ```
+
+### Requirements
+
+- Node.js 18.0.0 or higher
+- npm or yarn
+- Internet connection for AI features
 
 ## 📚 Quick Start
 
