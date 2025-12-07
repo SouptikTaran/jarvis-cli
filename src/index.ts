@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import inquirer from 'inquirer';
 import { JarvisCLI } from './cli/interface';
 import { Logger } from './utils/logger';
+import { displayHelp, displayStatus, displayTutorial } from './utils/help';
 import { SpotifyOAuth } from './auth/spotify';
 import { GoogleOAuth } from './auth/google';
 import { TokenStorage } from './config/tokenStorage';
@@ -30,6 +31,7 @@ async function main() {
 
     program
       .command('start')
+      .alias('chat')
       .description('Start interactive Jarvis session')
       .action(async (options) => {
         const jarvis = new JarvisCLI({
@@ -37,6 +39,30 @@ async function main() {
           debug: program.opts().debug,
         });
         await jarvis.start();
+      });
+
+    // Help command
+    program
+      .command('help')
+      .description('Display comprehensive help information')
+      .action(() => {
+        displayHelp();
+      });
+
+    // Status command
+    program
+      .command('status')
+      .description('Show JARVIS system health and service status')
+      .action(async () => {
+        await displayStatus();
+      });
+
+    // Tutorial command
+    program
+      .command('tutorial')
+      .description('Interactive tutorial for first-time users')
+      .action(async () => {
+        await displayTutorial();
       });
 
     // Authentication commands
@@ -277,6 +303,119 @@ async function main() {
           }
         } catch (error) {
           logger.error('Reset failed:', error);
+          process.exit(1);
+        }
+      });
+
+    configCommand
+      .command('update-gemini')
+      .description('Update Gemini API key')
+      .action(async () => {
+        try {
+          const credStorage = new CredentialStorage(logger);
+          const { apiKey } = await inquirer.prompt([
+            {
+              type: 'input',
+              name: 'apiKey',
+              message: 'Enter new Gemini API Key:',
+              validate: (input) => input.trim().length > 0 || 'API key cannot be empty'
+            }
+          ]);
+
+          const existing = await credStorage.loadCredentials();
+          await credStorage.saveCredentials({ ...existing, geminiApiKey: apiKey.trim() });
+          console.log(chalk.green('✅ Gemini API key updated successfully!'));
+        } catch (error) {
+          logger.error('Update failed:', error);
+          process.exit(1);
+        }
+      });
+
+    configCommand
+      .command('test-connection')
+      .description('Test connection to Gemini AI')
+      .action(async () => {
+        try {
+          console.log(chalk.cyan('🧪 Testing Gemini AI connection...\n'));
+          const credStorage = new CredentialStorage(logger);
+          const creds = await credStorage.loadCredentials();
+          
+          if (!creds.geminiApiKey) {
+            console.log(chalk.red('✗ No Gemini API key found'));
+            console.log(chalk.yellow('Run: jarvis config update-gemini'));
+            process.exit(1);
+          }
+
+          // Load credentials into environment
+          const envCreds = credStorage.toEnvFormat();
+          Object.assign(process.env, envCreds);
+
+          const { JarvisAgent } = await import('./agent/core');
+          const agent = new JarvisAgent({ verbose: false, debug: false });
+          const isConnected = await agent.testConnection();
+
+          if (isConnected) {
+            console.log(chalk.green('✅ Connection successful!'));
+            console.log(chalk.gray(`Available tools: ${agent.getAvailableTools().length}`));
+          } else {
+            console.log(chalk.red('✗ Connection failed'));
+            console.log(chalk.yellow('Check your API key and try again'));
+          }
+        } catch (error) {
+          console.log(chalk.red('✗ Connection failed'));
+          logger.error('Test failed:', error);
+          process.exit(1);
+        }
+      });
+
+    configCommand
+      .command('backup')
+      .description('Backup credentials to a file')
+      .argument('[path]', 'Backup file path', './jarvis-backup.json')
+      .action(async (path: string) => {
+        try {
+          const credStorage = new CredentialStorage(logger);
+          const tokenStorage = new TokenStorage(logger);
+          
+          const backup = {
+            credentials: await credStorage.loadCredentials(),
+            tokens: {
+              spotify: await tokenStorage.hasTokens('spotify') ? 'configured' : 'not-configured',
+              google: await tokenStorage.hasTokens('google') ? 'configured' : 'not-configured'
+            },
+            date: new Date().toISOString()
+          };
+
+          const fs = require('fs');
+          fs.writeFileSync(path, JSON.stringify(backup, null, 2));
+          console.log(chalk.green(`✅ Backup saved to: ${path}`));
+          console.log(chalk.yellow('⚠️  Note: OAuth tokens are not backed up (re-authenticate after restore)'));
+        } catch (error) {
+          logger.error('Backup failed:', error);
+          process.exit(1);
+        }
+      });
+
+    configCommand
+      .command('restore')
+      .description('Restore credentials from a backup file')
+      .argument('<path>', 'Backup file path')
+      .action(async (path: string) => {
+        try {
+          const fs = require('fs');
+          if (!fs.existsSync(path)) {
+            console.log(chalk.red(`✗ Backup file not found: ${path}`));
+            process.exit(1);
+          }
+
+          const backup = JSON.parse(fs.readFileSync(path, 'utf-8'));
+          const credStorage = new CredentialStorage(logger);
+          
+          await credStorage.saveCredentials(backup.credentials);
+          console.log(chalk.green('✅ Credentials restored successfully!'));
+          console.log(chalk.yellow('⚠️  Remember to re-authenticate services (jarvis auth spotify/google)'));
+        } catch (error) {
+          logger.error('Restore failed:', error);
           process.exit(1);
         }
       });
