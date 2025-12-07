@@ -67,7 +67,27 @@ An intelligent terminal-based AI assistant powered by Google's Gemini, with Spot
 
 ## 🛠️ Installation
 
-### Option 1: Install from GitHub (Recommended)
+### Option 1: Download Pre-built Binary (Easiest - No Node.js Required!)
+
+**Windows, macOS, or Linux** - Download standalone executables from [Releases](https://github.com/SouptikTaran/jarvis-cli/releases):
+
+1. Go to [Releases](https://github.com/SouptikTaran/jarvis-cli/releases)
+2. Download the binary for your platform:
+   - 🪟 Windows: `jarvis-cli-win-x64.exe`
+   - 🍎 macOS (Intel): `jarvis-cli-macos-x64`
+   - 🍎 macOS (Apple Silicon): `jarvis-cli-macos-arm64`
+   - 🐧 Linux: `jarvis-cli-linux-x64`
+3. Run it directly - no installation needed!
+
+**macOS/Linux users:** Make it executable first:
+```bash
+chmod +x jarvis-cli-*
+./jarvis-cli-* start
+```
+
+### Option 2: Install via npm
+
+Requires Node.js 18+:
 
 ```bash
 # Install globally from GitHub
@@ -79,7 +99,7 @@ jarvis start
 
 The package will automatically build after installation.
 
-### Option 2: Install from Source
+### Option 3: Install from Source (For Developers)
 
 ```bash
 # Clone the repository
@@ -106,6 +126,8 @@ npm start
 - Node.js 18.0.0 or higher
 - npm or yarn
 - Internet connection for AI features
+
+📋 **Need help installing?** See the [Complete Installation Guide](INSTALL.md) for platform-specific instructions and troubleshooting.
 
 ## 📚 Quick Start
 

@@ -9,6 +9,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# Release binaries
+release/
+*.exe
+
 # Environment files
 .env
 .env.local
